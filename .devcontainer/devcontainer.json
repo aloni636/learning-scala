@@ -1,0 +1,33 @@
+{
+    "name": "Scala",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "runArgs": [
+        "--name",
+        "${localWorkspaceFolderBasename}"
+    ],
+    "remoteUser": "ubuntu",
+    "forwardPorts": [
+        4040
+    ],
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash"
+            },
+            "extensions": [
+                // Generics
+                "streetsidesoftware.code-spell-checker",
+                "berublan.vscode-log-viewer",
+                "mechatroner.rainbow-csv",
+                "mads-hartmann.bash-ide-vscode",
+                // NOTE: Make sure to copy ~/.codex/auth.json into the devcontainer to avoid authenticating again
+                "openai.chatgpt",
+                // Scala
+                "scala-lang.scala",
+                "scalameta.metals"
+            ]
+        }
+    }
+}
