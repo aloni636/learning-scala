@@ -4,8 +4,9 @@ import java.{io => jio}
 import java.io.{File, FileNotFoundException}
 import HelloWorld.NeighborhoodMode.Plus
 import HelloWorld.NeighborhoodMode.Box
-import java.time.LocalDate
+import java.time.{LocalDate, Duration, Period}
 import java.time.format.DateTimeParseException
+import java.time.temporal.ChronoUnit
 import com.github.tototoshi.csv._
 import org.slf4j.LoggerFactory
 import pprint.pprintln
@@ -287,6 +288,7 @@ object HelloWorld extends App {
   val customersByCompany = customers.groupMapReduce(_.Company)(_ => 1)(_ + _)
   println("Consumers per company:")
   pprintln(customersByCompany)
+
   // fan-out based count rollup: we explode each item into all levels of the hierarchy, and then aggregate count
   // NOTE: Seq() is a trait which is implemented in Scala 2.13 using List
   val customersByLocation = customers
@@ -304,6 +306,41 @@ object HelloWorld extends App {
     .foreach { case ((country, cityOption), count) =>
       println(s"${(country +: cityOption.toList).mkString(" / ")} -> ${count}")
     }
+
+  val subscriptionTimeDifference =
+    customers
+      .map(_.SubscriptionDate)
+      .sortBy(identity)
+      .sliding(2)
+      .map(x =>
+        (
+          Period.between(x(0), x(1)), // calender aware time difference
+          ChronoUnit.DAYS.between(x(0), x(1)) // total days difference
+        )
+      )
+      .toList
+  // See: https://stackoverflow.com/a/40487511
+  val regexPattern = """\d+[YMD]""".r
+  val prettyDifferences = subscriptionTimeDifference
+    .sortBy(x => x._2)
+    .map { case (cal, total) =>
+      val totalPlural = if (total == 1) "" else "s"
+      val periodItems = regexPattern.findAllIn(cal.toString()).toList
+      periodItems
+        .map { item =>
+          val numeric = item.dropRight(1).toInt
+          val calPlural = if (numeric == 1) "" else "s"
+          val unit = item.last
+          numeric.toString + (unit match {
+            case 'Y' => " Year"
+            case 'M' => " Month"
+            case 'D' => " Day"
+          }) + calPlural
+        }
+        .mkString(", ") + s" (Total: ${total} Day" + totalPlural + ")"
+    }
+  println("Subscription time differences, ordered by max difference:")
+  pprintln(prettyDifferences)
 
   /*
   ---
