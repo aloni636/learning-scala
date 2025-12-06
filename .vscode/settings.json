@@ -4,6 +4,8 @@
         "**/target": true
     },
     "cSpell.words": [
-        "insitaintaing"
+        "insitaintaing",
+        "pprintln",
+        "rollup"
     ]
 }

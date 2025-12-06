@@ -5,6 +5,10 @@ import java.io.{File, FileNotFoundException}
 import HelloWorld.NeighborhoodMode.Plus
 import HelloWorld.NeighborhoodMode.Box
 import java.time.LocalDate
+import java.time.format.DateTimeParseException
+import com.github.tototoshi.csv._
+import org.slf4j.LoggerFactory
+import pprint.pprintln
 
 object HelloWorld extends App {
   /*
@@ -191,6 +195,8 @@ object HelloWorld extends App {
   sql select "*" from "abc" where Col("A") == 2
    */
 
+  println()
+
   /*
   ---
 
@@ -211,6 +217,93 @@ object HelloWorld extends App {
    * Split to lines, map to a case class `Record`.
    * Group by some field and compute an aggregate (mean, max, histogram).
    */
+
+  private val log = LoggerFactory.getLogger(getClass())
+
+  case class Customer(
+      Index: Int,
+      CustomerId: Long,
+      FirstName: String,
+      LastName: String,
+      Company: String,
+      City: String,
+      Country: String,
+      Phone1: String,
+      Phone2: String,
+      Email: String,
+      SubscriptionDate: LocalDate,
+      Website: String
+  )
+  // QUESTION: Why we had to use new here but not in List()
+  // ANSWER: Because List has a companion singleton List instance responsible for
+  //         instantiating List instances via static constructor wrappers
+  println(s"Current working directory: ${new File(".").getAbsoluteFile()}")
+  val csvFile = new File("../data/customers-100.csv")
+  if (!csvFile.exists())
+    throw new FileNotFoundException(
+      s"Couldn't find ${csvFile}\nMake sure to download it from https://github.com/datablist/sample-csv-files"
+    )
+  val reader = CSVReader.open(csvFile)
+  val records = reader.allWithHeaders()
+
+  val someCustomers: List[Option[Customer]] = records.map { record =>
+    try
+      Some(
+        Customer(
+          Index = record("Index").toInt,
+          CustomerId = java.lang.Long.parseLong(record("Customer Id"), 16),
+          FirstName = record("First Name"),
+          LastName = record("Last Name"),
+          Company = record("Company"),
+          City = record("City"),
+          Country = record("Country"),
+          Phone1 = record("Phone 1"),
+          Phone2 = record("Phone 2"),
+          Email = record("Email"),
+          SubscriptionDate = LocalDate.parse(record("Subscription Date")),
+          Website = record("Website")
+        )
+      )
+    catch {
+      case e @ (_: NumberFormatException | _: DateTimeParseException |
+          _: NoSuchElementException) => {
+        log.warn(
+          s"Failed to parse record due to ${e.getClass().getName()}: ${record}"
+        )
+        None
+      }
+      case e: Throwable => {
+        log.error(
+          s"Unexpected exception during customer record parsing: ${e.getClass().getName()}"
+        )
+        throw e
+      }
+    }
+  }
+  val customers = someCustomers.flatten
+  println(
+    s"Parsed ${someCustomers.length} CSV records into ${customers.length} customer entries"
+  )
+  val customersByCompany = customers.groupMapReduce(_.Company)(_ => 1)(_ + _)
+  println("Consumers per company:")
+  pprintln(customersByCompany)
+  // fan-out based count rollup: we explode each item into all levels of the hierarchy, and then aggregate count
+  // NOTE: Seq() is a trait which is implemented in Scala 2.13 using List
+  val customersByLocation = customers
+    .flatMap(x =>
+      Seq(
+        (x.Country, None),
+        (x.Country, Some(x.City))
+      )
+    )
+    .groupMapReduce(identity)(_ => 1)(_ + _)
+  println(s"Fan-out based location based customer count:")
+  customersByLocation.toList
+    .sortBy(_._2)
+    // NOTE: case is used for tuple unpacking, and is the preferable way to handle tuples/products
+    .foreach { case ((country, cityOption), count) =>
+      println(s"${(country +: cityOption.toList).mkString(" / ")} -> ${count}")
+    }
 
   /*
   ---
