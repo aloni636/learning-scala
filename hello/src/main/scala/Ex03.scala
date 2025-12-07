@@ -276,5 +276,104 @@ object Ex03 extends Exercise {
     println(
       s"Read tileKey3 into disk (explicit desugar): ${readFromDisk(tileStore, tileKeyToTileIndex(tileKey3))}"
     )
+
+    // ===== Implicit Traits And Typeclasses =====
+    /*
+    Exercise 1 – First typeclass: trait + companion + evidence
+
+    Goal: feel what “evidence” means: “I won’t call you unless I can prove A has capability X”.
+
+    Define a trait that represents “this type can be rendered as a tile ID string”.
+
+    Concept (you choose exact name and method signature):
+
+    Trait name idea: something like TileIdFormat[A]
+
+    It should have one method that, given a value of type A, returns a String which you will treat as “tile id representation”.
+
+    Example behaviors you might choose (just concepts):
+
+    For TileKey, produce something like "z/col/row"
+
+    For TileIndex, produce something like "idx=<value>"
+
+    But you decide what the method is called and how it formats.
+
+    Create a companion singleton object for that trait.
+
+    In that object, define at least two implicit values:
+
+    One instance of your trait for TileKey
+
+    One instance for TileIndex
+
+    The important part:
+    they live inside the companion of the trait, so they are in implicit search scope.
+
+    Define a generic function that prints a tile using a context bound:
+
+    It should be parameterized on A
+
+    It should require evidence that A has your formatting trait using a context bound syntax (the A: Something style)
+
+    Inside the function, you must:
+
+    use implicitly to summon your typeclass instance for A
+
+    call its method to build the string
+
+    print/log that string
+
+    In your run() (or similar):
+
+    Call this generic function with a TileKey
+
+    Call it with a TileIndex
+
+    Confirm:
+
+    you don’t pass any formatter explicitly
+
+    it still works (once you wired everything correctly)
+
+    Then, break it on purpose:
+
+    Call your function with some type that does not have an instance (e.g. Int or String)
+
+    Observe the compile error about missing implicit evidence
+
+    Read the error and try to map it in your head to:
+    “Compiler couldn’t find evidence TileIdFormat[Int]”.
+
+    This exercise is the “hello world” of:
+
+    trait as typeclass
+
+    implicit instances in a singleton companion
+
+    implicitly as “fetch me the evidence that A supports this operation”
+     */
+
+    trait TileFormatter[A] {
+      def format(a: A): String
+    }
+    // NOTE: This has to be companion of the trait, if not it would not participate when resolving TileFormatter for a concrete type
+    object TileFormatter {
+      // "Evidence provider" for Scala, specifying how to convert from concrete types to types necessary for `format`
+      implicit val tileKey: TileFormatter[TileKey] = x => x.toStringShort()
+      implicit val tileIndex: TileFormatter[TileIndex] = x => s"id:${x.index}"
+    }
+
+    def printTile[A: TileFormatter](tileSupporting: A): Unit = {
+      // NOTE: The actual value of `fmt` is "summoned" via implicits resolution, matching the input concrete type T at call-site
+      val fmt: TileFormatter[A] = implicitly[TileFormatter[A]]
+      val formattedTile = fmt.format(tileSupporting)
+      println(
+        s"Formatted representation of type '${tileSupporting.getClass().getName()}': ${formattedTile}"
+      )
+    }
+    val tileIndex1: TileIndex = tileKey4
+    printTile(tileKey4)
+    printTile(tileIndex1)
   }
 }
