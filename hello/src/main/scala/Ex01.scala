@@ -86,15 +86,13 @@ object Ex01 extends Exercise {
     println(s"Sum of ${prettifyList(someList)} is $summation")
 
     print("Enter a list of numbers delimited by ',': ")
-    if (false) {
-      val userNumbers = io.StdIn.readLine()
-      val parsedNumbers =
-        userNumbers
-          .split(",")
-          .map(_.strip().toIntOption)
-          .collect({ case Some(x) => x })
-      println(prettifyList(parsedNumbers))
-    }
+    val userNumbers = io.StdIn.readLine()
+    val parsedNumbers =
+      userNumbers
+        .split(",")
+        .map(_.strip().toIntOption)
+        .collect({ case Some(x) => x })
+    println(prettifyList(parsedNumbers))
 
     // Case Classes
     // Companionship is between class and object definitions sharing the same name.

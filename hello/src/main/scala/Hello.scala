@@ -126,12 +126,18 @@ object Main {
       hello.Ex02,
       hello.Ex03
     ).map(x => x.name -> x).toMap
-    val exerciseName = args.headOption.getOrElse("").strip()
+    val availableExercises = s"[${exercises.keys.mkString(", ")}]"
+    val exerciseName = args.headOption
+      .getOrElse(
+        io.StdIn
+          .readLine(s"Select exercise ${availableExercises}: ")
+      )
+      .strip()
     exercises.get(exerciseName) match {
       case Some(ex) => ex.run()
       case None     => {
         println(
-          s"Unknown exercise name '${exerciseName}'. Available exercises: [${exercises.keys.mkString(", ")}]"
+          s"Unknown exercise name '${exerciseName}'. Available exercises: ${availableExercises}"
         )
       }
     }
