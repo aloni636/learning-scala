@@ -361,5 +361,114 @@ object Ex03 extends Exercise {
     val tileIndex1: TileIndex = tileKey4
     printTile(tileKey4)
     printTile(tileIndex1)
+
+    /*
+    ## Exercise 2 – Evidence as a gate: “only zoomable types allowed”
+
+    **Goal:** feel how evidence is used to **constrain which types are allowed**, not just to format / log.
+
+    1. Define a new **trait** that represents “this type has a zoom level”.
+
+      Concept:
+
+      - Name idea: something like `HasZoom[A]`
+      - It should have a method that, given an `A`, returns an `Int` zoom level
+
+    2. In the companion singleton of this trait:
+
+      - Define an implicit instance for `TileKey` that extracts `zoom`
+        (you decide exactly how)
+      - Optionally, define another instance for any other type that also has a meaningful zoom in your head (or don’t; up to you)
+
+    3. Write a **generic function** that:
+
+      - Takes a value of type `A`
+      - Requires evidence that `A` has this zoom capability (context bound or explicit `(implicit ev: HasZoom[A])`)
+      - Uses `implicitly` (or the implicit parameter) to fetch the instance
+      - Prints or logs something like “zoom of this thing is X”
+
+    4. In `run()`:
+
+      - Call it with a `TileKey` → should compile and work.
+      - Try to call it with `TileIndex` (assuming you did *not* define `HasZoom[TileIndex]`) → should *fail* to compile.
+
+    5. Read the error and interpret it as:
+
+      - “To call this function with `TileIndex`, I need evidence `HasZoom[TileIndex]` and none is in scope.”
+
+    This is the pure “evidence as a gate” pattern:
+
+    > The function’s signature is not “A must be a subtype of something”,
+    > but “A must have evidence of a capability.”
+     */
+    trait HasZoom[A] {
+      def getZoom(a: A): Int
+    }
+    object HasZoom {
+      implicit val tileKeyZoom: HasZoom[TileKey] = x => x.zoom
+    }
+
+    def printZoomLevel[A: HasZoom](zoomSupporting: A): Unit = {
+      val zoomGetter = implicitly[HasZoom[A]]
+      println(s"Zoom level: ${zoomGetter.getZoom(zoomSupporting)}")
+    }
+    println("Printing zooms for TileKey (supported):")
+    printZoomLevel(tileKey2)
+    // NOTE: implicit evidence can be anywhere within the implicit resolution scopes:
+    // implicit val tileIndexZoom: HasZoom[TileIndex] = x => -1
+    implicit def tileIndexZoom(implicit log: Logger): HasZoom[TileIndex] = {
+      x =>
+        log.warn(
+          "Attempting to access zoom for TileIndex which doesn't have any"
+        )
+        -1
+    }
+    println("Printing zooms for TileIndex (unsupported but suppressed):")
+    printZoomLevel(tileIndex1)
+
+    /*
+    ## Exercise 3 – Equivalence of context-bound vs explicit implicit param
+
+    **Goal:** see that `A: Typeclass` is just syntax sugar for an implicit parameter + `implicitly`.
+
+    1. Take either of the generic functions you wrote above (formatter or zoom).
+
+    2. Create **another function** that does the same thing but:
+
+      - Instead of a context bound `A: TileIdFormat` or `A: HasZoom`,
+      - Use an explicit parameter list with an `(implicit something: YourTrait[A])`.
+
+    3. Inside that new function:
+
+      - Use the implicit parameter directly
+      - Also use `implicitly` and confirm it returns the same instance (e.g. by equality or by reference in println)
+
+    4. At the call site:
+
+      - Call both versions with the same type(s) (`TileKey`, etc.)
+      - Confirm you never explicitly pass the evidence parameter; it’s still inferred and injected for both.
+
+    Concept to internalize:
+
+    - `def foo[A: C](a: A)`
+      expands conceptually to
+      `def foo[A](a: A)(implicit c: C[A])`
+
+    And inside, `implicitly[C[A]]` and `c` are the same value.
+     */
+    def anotherTileFunction[A](
+        someTile: A
+    )(implicit fmt: TileFormatter[A], log: Logger): Unit = {
+      // NOTE: Both `fmt` and `log` are implicit
+      val implicitlyFmt = implicitly[TileFormatter[A]]
+      log.info(s"implicitlyFmt=${implicitlyFmt}, fmt=${fmt}")
+      println(s"Are implicitlyFmt and fmt the same? ${fmt==implicitlyFmt}")
+      val formatted = fmt.format(someTile)
+
+      println(
+        s"We just formatted a tile using TileFormatter without typeclass: $formatted"
+      )
+    }
+    anotherTileFunction(tileKey1)
   }
 }
