@@ -5,21 +5,6 @@ import hello.Exercise
 /*
   ---
 
-  ### 4. Minimal concurrency
-
-  You do not need heavy FP here; just enough to not fear `Future`:
-
- * `Future`, `ExecutionContext`, `map`/`flatMap` on `Future`.
- * When writing GeoTrellis + Spark jobs you’ll mostly rely on Spark’s own parallelism, but `Future` does appear in tooling and orchestrating code.
-
-  Exercise:
-
- * Wrap a small blocking I/O call (e.g. reading a file) in a `Future` and sequence two of them with a `for`-comprehension.
- */
-
-/*
-  ---
-
   ### 5. GeoTrellis core (single-JVM, no Spark)
 
   Goal: be fluent with the basic data model and raster operations.
@@ -122,9 +107,11 @@ import hello.Exercise
 object Main {
   def main(args: Array[String]): Unit = {
     val exercises: Map[String, Exercise] = List(
+      // TODO: Find a way to auto-discover Exercise extenders
       hello.Ex01,
       hello.Ex02,
-      hello.Ex03
+      hello.Ex03,
+      hello.Ex04
     ).map(x => x.name -> x).toMap
     val availableExercises = s"[${exercises.keys.mkString(", ")}]"
     val exerciseName = args.headOption
