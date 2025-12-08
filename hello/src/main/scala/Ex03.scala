@@ -279,79 +279,65 @@ object Ex03 extends Exercise {
 
     // ===== Implicit Traits And Typeclasses =====
     /*
-    Exercise 1 – First typeclass: trait + companion + evidence
+    ## Exercise 1 – First typeclass: trait + companion + evidence
 
-    Goal: feel what “evidence” means: “I won’t call you unless I can prove A has capability X”.
+    **Goal:** feel what “evidence” means: “I won’t call you unless I can prove A has capability X”.
 
-    Define a trait that represents “this type can be rendered as a tile ID string”.
+    1. Define a **trait** that represents “this type can be rendered as a tile ID string”.
 
-    Concept (you choose exact name and method signature):
+      Concept (you choose exact name and method signature):
 
-    Trait name idea: something like TileIdFormat[A]
+      - Trait name idea: something like `TileIdFormat[A]`
+      - It should have **one method** that, given a value of type `A`, returns a `String` which you will treat as “tile id representation”.
 
-    It should have one method that, given a value of type A, returns a String which you will treat as “tile id representation”.
+      Example behaviors you might choose (just concepts):
 
-    Example behaviors you might choose (just concepts):
+      - For `TileKey`, produce something like `"z/col/row"`
+      - For `TileIndex`, produce something like `"idx=<value>"`
 
-    For TileKey, produce something like "z/col/row"
+      But you decide what the method is called and how it formats.
 
-    For TileIndex, produce something like "idx=<value>"
+    2. Create a **companion singleton object** for that trait.
 
-    But you decide what the method is called and how it formats.
+      In that object, define **at least two** implicit values:
 
-    Create a companion singleton object for that trait.
+      - One instance of your trait for `TileKey`
+      - One instance for `TileIndex`
 
-    In that object, define at least two implicit values:
+      The important part:
+      they live inside the companion of the trait, so they are in **implicit search scope**.
 
-    One instance of your trait for TileKey
+    3. Define a **generic function** that prints a tile using a context bound:
 
-    One instance for TileIndex
+      - It should be parameterized on `A`
+      - It should require evidence that `A` has your formatting trait using a **context bound** syntax (the `A: Something` style)
+      - Inside the function, you must:
 
-    The important part:
-    they live inside the companion of the trait, so they are in implicit search scope.
+        - use `implicitly` to summon your typeclass instance for `A`
+        - call its method to build the string
+        - print/log that string
 
-    Define a generic function that prints a tile using a context bound:
+    4. In your `run()` (or similar):
 
-    It should be parameterized on A
+      - Call this generic function with a `TileKey`
+      - Call it with a `TileIndex`
+      - Confirm:
 
-    It should require evidence that A has your formatting trait using a context bound syntax (the A: Something style)
+        - you don’t pass any formatter explicitly
+        - it still works (once you wired everything correctly)
 
-    Inside the function, you must:
+    5. Then, *break it* on purpose:
 
-    use implicitly to summon your typeclass instance for A
-
-    call its method to build the string
-
-    print/log that string
-
-    In your run() (or similar):
-
-    Call this generic function with a TileKey
-
-    Call it with a TileIndex
-
-    Confirm:
-
-    you don’t pass any formatter explicitly
-
-    it still works (once you wired everything correctly)
-
-    Then, break it on purpose:
-
-    Call your function with some type that does not have an instance (e.g. Int or String)
-
-    Observe the compile error about missing implicit evidence
-
-    Read the error and try to map it in your head to:
-    “Compiler couldn’t find evidence TileIdFormat[Int]”.
+      - Call your function with some type that does not have an instance (e.g. `Int` or `String`)
+      - Observe the compile error about missing implicit evidence
+      - Read the error and try to map it in your head to:
+        “Compiler couldn’t find evidence `TileIdFormat[Int]`”.
 
     This exercise is the “hello world” of:
 
-    trait as typeclass
-
-    implicit instances in a singleton companion
-
-    implicitly as “fetch me the evidence that A supports this operation”
+    - trait as typeclass
+    - implicit instances in a singleton companion
+    - `implicitly` as “fetch me the evidence that A supports this operation”
      */
 
     trait TileFormatter[A] {
