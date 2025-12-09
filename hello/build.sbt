@@ -5,3 +5,6 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "2.0.9"
 )
 libraryDependencies += "com.lihaoyi" %% "pprint" % "0.9.6"
+// https://mvnrepository.com/artifact/org.locationtech.geotrellis/geotrellis-raster
+// https://github.com/locationtech/geotrellis?tab=readme-ov-file#getting-started
+libraryDependencies += "org.locationtech.geotrellis" %% "geotrellis-raster" % "3.8.0"

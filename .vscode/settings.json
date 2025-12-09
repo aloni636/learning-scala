@@ -8,6 +8,8 @@
         "insitaintaing",
         "pprintln",
         "rollup",
-        "typeclass"
+        "Singleband",
+        "typeclass",
+        "geotrellis"
     ]
 }

@@ -1,34 +1,9 @@
 // scala 2.13
 package hello
 import hello.Exercise
-
-/*
-  ---
-
-  ### 5. GeoTrellis core (single-JVM, no Spark)
-
-  Goal: be fluent with the basic data model and raster operations.
-
-  Focus concepts:
-
- * `Extent`, `CRS`, `Raster[Tile]`, `MultibandTile`, `ProjectedRaster`.
- * Reading/writing GeoTIFFs (`SinglebandGeoTiff`, `MultibandGeoTiff`).
- * Local operations (map algebra on cell values).
- * Focal operations (filters, slope, hillshade), reclassification, resampling.
- * Reprojection between CRSs.
-
-  Suggested path:
-
- * Add GeoTrellis core deps to your sbt project (`geotrellis-raster`, `geotrellis-vector`, `geotrellis-proj4`, `geotrellis-gdal` or GeoTIFF module).
- * In a tiny `Main` object:
-
- * Read a GeoTIFF into `SinglebandGeoTiff`.
- * Inspect `extent`, `crs`, `tile.cols`, `tile.rows`.
- * Run a simple local op: “set all negative values to NODATA”, or normalize values.
- * Write the result to a new GeoTIFF.
-
-  This keeps you in pure Scala, no Spark yet, so the cognitive load stays low.
- */
+import scala.io
+import scala.collection.immutable.ListMap
+import scala.collection.immutable.ListMapBuilder
 
 /*
   ---
@@ -106,13 +81,16 @@ import hello.Exercise
 
 object Main {
   def main(args: Array[String]): Unit = {
-    val exercises: Map[String, Exercise] = List(
-      // TODO: Find a way to auto-discover Exercise extenders
-      hello.Ex01,
-      hello.Ex02,
-      hello.Ex03,
-      hello.Ex04
-    ).map(x => x.name -> x).toMap
+    val exercises = ListMap.from(
+      List(
+        // TODO: Find a way to auto-discover Exercise extenders
+        hello.Ex01,
+        hello.Ex02,
+        hello.Ex03,
+        hello.Ex04,
+        hello.Ex05
+      ).map(x => x.name -> x)
+    )
     val availableExercises = s"[${exercises.keys.mkString(", ")}]"
     val exerciseName = args.headOption
       .getOrElse(
