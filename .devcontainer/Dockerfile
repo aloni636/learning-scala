@@ -83,4 +83,11 @@ RUN mkdir -p ~/.local/share/coursier/bin \
     "scalafmt:${SCALAFMT_VERSION}" \
     --install-dir ~/.local/share/coursier/bin
 
+# Install GDAL to verify Geotrellis results
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    gdal-bin \
+    && rm -rf /var/lib/apt/lists/*
+
 USER ${USERNAME}

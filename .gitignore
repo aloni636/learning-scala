@@ -71,3 +71,6 @@ project/**/metals.sbt
 
 .bsp
 .history
+
+# ===== Visualizations =====
+visualizations/

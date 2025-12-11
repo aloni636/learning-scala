@@ -5,11 +5,15 @@
     },
     "cSpell.words": [
         "Chrono",
+        "gdal",
+        "geotrellis",
         "insitaintaing",
         "pprintln",
+        "Reproject",
+        "Reprojected",
+        "Reprojecting",
         "rollup",
         "Singleband",
-        "typeclass",
-        "geotrellis"
+        "typeclass"
     ]
 }
