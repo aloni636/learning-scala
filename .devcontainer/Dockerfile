@@ -15,6 +15,9 @@ ARG SCALA_VERSION=2.13.18
 ARG SBT_VERSION=1.11.7
 ARG SCALA_CLI_VERSION=1.6.1
 ARG AMMONITE_VERSION=3.0.4
+# NOTE: 0.14.1 crashes the kernel with `method not found` exception
+ARG ALMOND_VERSION=0.14.3
+ARG ALMOND_SCALA_VERSION=2.13
 ARG SCALAFMT_VERSION=3.10.2
 
 # spark user configuration
@@ -89,5 +92,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     gdal-bin \
     && rm -rf /var/lib/apt/lists/*
+
+# Install almond kernel
+USER ${USERNAME}
+RUN cs launch --use-bootstrap almond:${ALMOND_VERSION} --scala ${ALMOND_SCALA_VERSION} -- --install
 
 USER ${USERNAME}

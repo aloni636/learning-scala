@@ -1,16 +1,17 @@
 package hello
 // Geotrellis
 import geotrellis.raster._
+import geotrellis.raster.{isData, isNoData}
 import geotrellis.raster.io.geotiff._
 import geotrellis.proj4._
 import geotrellis.raster.reproject._
 import geotrellis.proj4.util.UTM
 import geotrellis.raster.histogram._
+import geotrellis.raster.mapalgebra.focal.Slope
+import geotrellis.raster.regiongroup.RegionGroupOptions
 // General purpose utilities
 import org.slf4j.{Logger, LoggerFactory}
 import pprint.pprintln
-import geotrellis.raster.mapalgebra.focal.Slope
-import cats.instances.unit
 
 /*
 ### 5. GeoTrellis core (single-JVM, no Spark)
@@ -103,8 +104,6 @@ object Ex05 extends Exercise {
   val DISPLAY_MAX_HEIGHT = 1200
   val RESAMPLING_METHOD = ResampleMethods.Bilinear
 
-  def toTargetScale(cols: Int, rows: Int) = {}
-
   def visualizeTile(tile: Tile, name: String = "tile")(implicit
       log: Logger
   ): Unit = {
@@ -129,8 +128,7 @@ object Ex05 extends Exercise {
     // Define color-ramp (pretty visualizations)
     val hist = smallTile.histogramDouble()
     val ramp = ColorRamps.Viridis
-    val colorMap =
-      ColorMap.fromQuantileBreaks(hist, ramp)
+    val colorMap = ColorMap.fromQuantileBreaks(hist, ramp)
 
     // Write to filesystem
     val filename: String = if (name.endsWith(".png")) name else s"${name}.png"
@@ -186,7 +184,65 @@ object Ex05 extends Exercise {
     // NOTE: I use `GeoTiff.mapTile` / `ProjectedRaster.mapTile` / `GeoTiff.copy(tile = ...)`
     // to avoid accessing deeply nested geotrellis objects properties each time I want to do some operation
     val slopes = everest.mapTile(t => t.slope(everest.cellSize))
-    visualizeTile(everest, "../visualizations/everest")
-    visualizeTile(slopes, "../visualizations/slopes")
+    // visualizeTile(everest, "../visualizations/everest")
+    // visualizeTile(slopes, "../visualizations/slopes")
+
+    /* Compute all slope based islands which are at least 70% visible from the highest point in mount everest
+     * - Local, focal, zonal & global operations:
+     * - Focal: slopes
+     * - Iterative-Focal-Propagation: viewshed (ray wavefront expansion, resembling Dijkstra wavefront but with max slope accumulation as cost metric)
+     * - Zonal: regionGroup island creation, viewshed aggregation
+     * - Local: merging viewshed with islands, filtering islands
+     * - Global: reporting and debugging
+     */
+    val MAX_SLOPE: Double = 15.0
+    val MIN_VISIBILITY_PERCENTAGE: Double = 30
+    val CONNECTIVITY_METHOD: Connectivity = FourNeighbors
+
+    log.info("Computing slopeRegions...")
+    val slopeRegions = slopes.mapTile(t =>
+      t.mapDouble(x => if (isNoData(x) || x > MAX_SLOPE) Double.NaN else 1)
+        .regionGroup(RegionGroupOptions(CONNECTIVITY_METHOD))
+        .tile
+    )
+
+    log.info("Getting DTM max height index...")
+    val (maxCol, maxRow, maxZ) = {
+      // NOTE: GeoTrellis does not provide functional fold operation over tiles
+      var (maxCol, maxRow, maxZ) = (0, 0, 0.0)
+      everest.tile.foreachDouble { (col: Int, row: Int, z: Double) =>
+        if (z > maxZ) {
+          maxCol = col
+          maxRow = row
+          maxZ = z
+        }
+      }
+      (maxCol, maxRow, maxZ)
+    }
+    log.info(s"DTM max index: maxCol=${maxCol} maxRow=${maxRow} maxZ=${maxZ})")
+
+    log.info("Computing DTM viewshed...")
+    val viewshed =
+      everest.mapTile(t => t.viewshed(maxCol, maxRow, exact = false))
+
+    val viewshedRegionHistogram =
+      viewshed.tile.zonalHistogramDouble(slopeRegions)
+
+    val viewshedRegionIds = viewshedRegionHistogram
+      .filter { case (rid, hist) =>
+        val visible = hist.itemCount(1.0)
+        val total = hist.totalCount()
+        total > 0 && (visible.toDouble / total.toDouble) >= (MIN_VISIBILITY_PERCENTAGE / 100.0)
+      }
+      .map(_._1)
+      .toSet
+
+    val visibleSlopeRegions = slopeRegions.mapTile(t =>
+      t.mapIfSet(rid => if (viewshedRegionIds.contains(rid)) rid else NODATA)
+    )
+
+    visualizeTile(slopeRegions, "../visualizations/slopeRegions")
+    visualizeTile(visibleSlopeRegions, "../visualizations/visibleSlopeRegions")
+    visualizeTile(viewshed, "../visualizations/viewshed")
   }
 }

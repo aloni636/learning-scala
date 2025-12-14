@@ -1,5 +1,10 @@
 {
-    "explorer.excludeGitIgnore": true,
+    "files.exclude": {
+        "**/.bloop": true,
+        "**/.metals": true,
+        "**/.bsp": true,
+        "**/target": true
+    },
     "files.watcherExclude": {
         "**/target": true
     },
@@ -8,12 +13,14 @@
         "gdal",
         "geotrellis",
         "insitaintaing",
+        "NODATA",
         "pprintln",
         "Reproject",
         "Reprojected",
         "Reprojecting",
         "rollup",
         "Singleband",
-        "typeclass"
+        "typeclass",
+        "Viewshed"
     ]
 }
