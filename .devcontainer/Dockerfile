@@ -97,4 +97,14 @@ RUN apt-get update \
 USER ${USERNAME}
 RUN cs launch --use-bootstrap almond:${ALMOND_VERSION} --scala ${ALMOND_SCALA_VERSION} -- --install
 
+# Install AWS CLI v2
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl unzip \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip \
+    && unzip -q /tmp/awscliv2.zip -d /tmp \
+    && /tmp/aws/install \
+    && rm -rf /tmp/aws /tmp/awscliv2.zip
+
 USER ${USERNAME}

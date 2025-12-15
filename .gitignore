@@ -1,6 +1,6 @@
 # ======= scala =======
 # modified version of: https://github.com/scala/scala/blob/2.13.x/.gitignore
-# 
+
 # Are you tempted to edit this file?
 #
 # First consider if the changes make sense for all,
@@ -74,3 +74,4 @@ project/**/metals.sbt
 
 # ===== Visualizations =====
 visualizations/
+data/copernicus

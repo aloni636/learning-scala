@@ -5,6 +5,9 @@ Make sure your'e in hello, `cd ./hello`.
 # Running Exercises
 I use a **cli argument dispatcher**, so you select an exercise by it's object name and run it: `sbt "run Ex01"`. View all available exercises by running `sbt run`.
 
+# Creating Exercises
+Create a new `Ex<>` file in `hello/src/main/scala`, and add an `Exercise` object with a `run` method. After that you should add it to the exercise list in `hello/src/main/scala/hello` and run it with `sbt "run Ex<>"`.
+
 # Credits
 - https://github.com/datablist/sample-csv-files for `./data/customers-100.csv`.
 - https://file-examples.com/index.php/sample-images-download/sample-tiff-download/ for `./data/0x00000001-0x00000002-0x00000001.tiff` (downsampled).
