@@ -4,6 +4,9 @@
 # NOTE: eclipse-temurin is how you get openjdk now
 FROM eclipse-temurin:17
 
+# Make all RUN commands use 'set -eux' by default with pipefail for better command pipelines
+SHELL ["/bin/bash", "-eux", "-o", "pipefail", "-c"]
+
 # Spark binary version
 # NOTE: We use Spark 3.3.X as this is the latest version compatible with GeoTrellis
 # NOTE: Scala version is 2.13.8
@@ -15,10 +18,10 @@ ARG SCALA_BINARY_VERSION=2.13
 #       VIEW AVAILABLE VERSIONS BY VISITING MVN FOR EACH PACKAGE!
 # coursier Scala version
 ARG CS_VERSION=2.1.24
-ARG SCALA_VERSION=2.13.8
 ARG SBT_VERSION=1.11.7
 ARG SCALA_CLI_VERSION=1.6.1
 ARG AMMONITE_VERSION=3.0.4
+# NOTE: This warning was resolved by detecting scala version from spark jars at build time, but is still relevant for ALMOND_VERSION
 # WARNING: SCAlA VERSION MUST MATCH THE SCALA VERSION OF SPARK!
 #          MISMATCHING VERSIONS (EVEN 2.13.17 VS 2.13.8) WILL CAUSE CRYPTIC ERRORS (WHICH CAN TAKE DAYS TO DEBUG!)
 #          LIKE `Can only call getServletHandlers on a running MetricsSystem`
@@ -26,7 +29,6 @@ ARG AMMONITE_VERSION=3.0.4
 #          WITH THEM ONLY BEING SURFACED IN `$SPARK_HOME/logs/spark--org.apache.spark.deploy.master.Master-1-spark-localhost.out`
 # See scala 2.13.8 compatible almond versions here: https://mvnrepository.com/artifact/sh.almond/scala-kernel_2.13.8
 ARG ALMOND_VERSION=0.13.14
-ARG ALMOND_SCALA_VERSION=2.13.8
 ARG SCALAFMT_VERSION=3.10.2
 
 # Jupyterlab configuration
@@ -67,8 +69,7 @@ RUN curl -fsSL "https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spa
     && rm /tmp/spark.tgz
 
 # coursier (Scala artifact fetcher)
-RUN set -eux; \
-    curl -fsSL "https://github.com/coursier/coursier/releases/download/v${CS_VERSION}/cs-x86_64-pc-linux.gz" \
+RUN curl -fsSL "https://github.com/coursier/coursier/releases/download/v${CS_VERSION}/cs-x86_64-pc-linux.gz" \
     -o /tmp/cs.gz; \
     gunzip /tmp/cs.gz; \
     install -m 0755 /tmp/cs /usr/local/bin/cs; \
@@ -77,17 +78,22 @@ RUN set -eux; \
 # spark user & devcontainer workspace dir
 # See: https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user#_creating-a-nonroot-user
 # NOTE: ignores if group id already exists; attempts to create a new user if ${USERNAME} with ${USER_UID} does not exist - fail if unsuccessful
-RUN set -eux; \
-    getent group "${USER_GID}" || groupadd --gid "${USER_GID}" "${USERNAME}" \
+RUN getent group "${USER_GID}" || groupadd --gid "${USER_GID}" "${USERNAME}" \
     && ( id "${USERNAME}" && [ "$(id -u "${USERNAME}")" = "${USER_UID}" ] \
     || useradd --uid "${USER_UID}" --gid "${USER_GID}" -m -s /bin/bash "${USERNAME}" ) \
     && mkdir -p /workspaces \
     && ( chown -R "${USER_UID}:${USER_GID}" "/home/${USERNAME}" /workspaces || true )
 
+# Derive Scala patch version from Spark distribution
+# (AND AVOID MISMATCH BETWEEN INSTALLED SCALA AND SPARK SCALA VERSIONS!)
+RUN SCALA_VERSION="$(basename /opt/spark/jars/scala-library-*.jar .jar | cut -d- -f3)"; \
+    echo "SCALA_VERSION=$SCALA_VERSION" | tee /etc/spark-scala.env
+
 # Install Scala and dev-tools
 # NOTE: We `cs install` and not `cs setup` because we want to be explicit about package versions
 USER ${USERNAME}
-RUN mkdir -p ~/.local/share/coursier/bin \
+RUN . /etc/spark-scala.env; \
+    mkdir -p ~/.local/share/coursier/bin \
     && cs install "scala:${SCALA_VERSION}" \
     "scalac:${SCALA_VERSION}" \
     "scala-cli:${SCALA_CLI_VERSION}" \
@@ -97,7 +103,8 @@ RUN mkdir -p ~/.local/share/coursier/bin \
     "scalafmt:${SCALAFMT_VERSION}" \
     --install-dir ~/.local/share/coursier/bin
 # Install almond kernel
-RUN cs launch --use-bootstrap almond:${ALMOND_VERSION} --scala ${ALMOND_SCALA_VERSION} -- --install
+RUN . /etc/spark-scala.env; \
+    cs launch --use-bootstrap almond:${ALMOND_VERSION} --scala ${SCALA_VERSION} -- --install
 
 # Install GDAL to verify Geotrellis results
 USER root
