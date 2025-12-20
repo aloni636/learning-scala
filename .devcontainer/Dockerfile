@@ -5,20 +5,32 @@
 FROM eclipse-temurin:17
 
 # Spark binary version
+# NOTE: We use Spark 3.3.X as this is the latest version compatible with GeoTrellis
+# NOTE: Scala version is 2.13.8
 ARG SPARK_VERSION=3.3.4
 ARG HADOOP_VERSION=3
 ARG SCALA_BINARY_VERSION=2.13
 
+# WARNING: Generally, before installing packages, verify they will be compatible with the scala version bundled with Spark
+#       VIEW AVAILABLE VERSIONS BY VISITING MVN FOR EACH PACKAGE!
 # coursier Scala version
 ARG CS_VERSION=2.1.24
-ARG SCALA_VERSION=2.13.18
+ARG SCALA_VERSION=2.13.8
 ARG SBT_VERSION=1.11.7
 ARG SCALA_CLI_VERSION=1.6.1
 ARG AMMONITE_VERSION=3.0.4
-# NOTE: 0.14.1 crashes the kernel with `method not found` exception
-ARG ALMOND_VERSION=0.14.3
-ARG ALMOND_SCALA_VERSION=2.13
+# WARNING: SCAlA VERSION MUST MATCH THE SCALA VERSION OF SPARK!
+#          MISMATCHING VERSIONS (EVEN 2.13.17 VS 2.13.8) WILL CAUSE CRYPTIC ERRORS (WHICH CAN TAKE DAYS TO DEBUG!)
+#          LIKE `Can only call getServletHandlers on a running MetricsSystem`
+#          WHEN CONNECTING TO SPARK FROM THE NOTEBOOK(!),
+#          WITH THEM ONLY BEING SURFACED IN `$SPARK_HOME/logs/spark--org.apache.spark.deploy.master.Master-1-spark-localhost.out`
+# See scala 2.13.8 compatible almond versions here: https://mvnrepository.com/artifact/sh.almond/scala-kernel_2.13.8
+ARG ALMOND_VERSION=0.13.14
+ARG ALMOND_SCALA_VERSION=2.13.8
 ARG SCALAFMT_VERSION=3.10.2
+
+# Jupyterlab configuration
+ARG PYTHON_VERSION=3.12
 
 # spark user configuration
 # NOTE: eclipse-temurin:17 comes with non root ubuntu user, so this is technically not necessary
@@ -28,22 +40,21 @@ ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
 ENV SPARK_HOME=/opt/spark
-# NOTE: When switching spark user to different name 
-#       make sure to switch /home/spark to /home/{new username}
-ENV PATH="${SPARK_HOME}/bin:/home/${USERNAME}/.local/share/coursier/bin:${PATH}"
+ENV PATH="/home/${USERNAME}/.local/share/coursier/bin:${PATH}"
 
-# NOTE: set -eux = -e: exit on error, -u: fail on undefined vars, -x: print executed commands	
+# NOTE: set -eux
+#       -e: exit on error
+#       -u: fail on undefined vars
+#       -x: print executed commands	
 
 # Base tools
 USER root
+# Install curl for downloads, unzip for awscli, ca-certificates for https, gnupg for apt over https
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     curl \
+    unzip \
     ca-certificates \
-    git \
-    bash \
-    less \
-    vim \
     gnupg \
     && rm -rf /var/lib/apt/lists/*
 
@@ -55,7 +66,7 @@ RUN curl -fsSL "https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spa
     && mv "/opt/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}-scala${SCALA_BINARY_VERSION}" "${SPARK_HOME}" \
     && rm /tmp/spark.tgz
 
-# couriser (artifact fetcher)
+# coursier (Scala artifact fetcher)
 RUN set -eux; \
     curl -fsSL "https://github.com/coursier/coursier/releases/download/v${CS_VERSION}/cs-x86_64-pc-linux.gz" \
     -o /tmp/cs.gz; \
@@ -85,6 +96,8 @@ RUN mkdir -p ~/.local/share/coursier/bin \
     "ammonite:${AMMONITE_VERSION}" \
     "scalafmt:${SCALAFMT_VERSION}" \
     --install-dir ~/.local/share/coursier/bin
+# Install almond kernel
+RUN cs launch --use-bootstrap almond:${ALMOND_VERSION} --scala ${ALMOND_SCALA_VERSION} -- --install
 
 # Install GDAL to verify Geotrellis results
 USER root
@@ -93,18 +106,43 @@ RUN apt-get update \
     gdal-bin \
     && rm -rf /var/lib/apt/lists/*
 
-# Install almond kernel
-USER ${USERNAME}
-RUN cs launch --use-bootstrap almond:${ALMOND_VERSION} --scala ${ALMOND_SCALA_VERSION} -- --install
-
 # Install AWS CLI v2
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl unzip \
-    && rm -rf /var/lib/apt/lists/*
 RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip \
     && unzip -q /tmp/awscliv2.zip -d /tmp \
     && /tmp/aws/install \
     && rm -rf /tmp/aws /tmp/awscliv2.zip
+
+# Additional utilities
+# NOTE: openjdk-17-source is installed for metals Java classes goto-definition support
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    git \
+    bash \
+    less \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python3.12
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    python3.12 \
+    && rm -rf /var/lib/apt/lists/*
+# NOTE: eclipse-temurin:17 doesn't come with available apt installable python3-pip
+RUN curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py \
+    && python3.12 /tmp/get-pip.py --break-system-packages --root-user-action=ignore \
+    && rm /tmp/get-pip.py
+# Install jupyterlab
+RUN pip3 install --no-cache-dir --break-system-packages --root-user-action=ignore jupyterlab jupyterlab-lsp
+
+USER ${USERNAME}
+RUN cs install metals --install-dir ~/.local/share/coursier/bin
+
+# NOTE: creating /var/spark-events before mounting (in devcontainer.json) ensures proper permissions
+USER root
+RUN mkdir -p /var/spark-events \
+    && chown ${USERNAME}:${USERNAME} /var/spark-events
 
 USER ${USERNAME}

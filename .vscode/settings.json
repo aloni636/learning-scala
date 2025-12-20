@@ -1,15 +1,21 @@
 {
     "files.exclude": {
+        // Metals
         "**/.bloop": true,
         "**/.metals": true,
         "**/.bsp": true,
-        "**/target": true
+        "**/target": true,
+        // JupyterLab
+        ".virtual_documents": true,
+        ".ipynb_checkpoints": true,
+        ".Trash-1000": true
     },
     "files.watcherExclude": {
         "**/target": true
     },
     "cSpell.words": [
         "Chrono",
+        "coursier",
         "gdal",
         "geotrellis",
         "insitaintaing",
@@ -20,7 +26,9 @@
         "Reprojecting",
         "rollup",
         "Singleband",
+        "tripdata",
         "typeclass",
         "Viewshed"
-    ]
+    ],
+    "metals.inlayHints.hintsXRayMode.enable": false
 }

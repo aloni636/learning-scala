@@ -1,4 +1,3 @@
-# ======= scala =======
 # modified version of: https://github.com/scala/scala/blob/2.13.x/.gitignore
 
 # Are you tempted to edit this file?
@@ -72,6 +71,14 @@ project/**/metals.sbt
 .bsp
 .history
 
-# ===== Visualizations =====
+# ----- end of scala template ----- #
+
+# data & visualizations
 visualizations/
-data/copernicus
+data/himalayas
+data/taxi
+
+# jupyterlab
+.virtual_documents
+.ipynb_checkpoints
+.Trash-1000

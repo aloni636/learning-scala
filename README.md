@@ -8,6 +8,27 @@ I use a **cli argument dispatcher**, so you select an exercise by it's object na
 # Creating Exercises
 Create a new `Ex<>` file in `hello/src/main/scala`, and add an `Exercise` object with a `run` method. After that you should add it to the exercise list in `hello/src/main/scala/hello` and run it with `sbt "run Ex<>"`.
 
+# Running Spark Exercises
+A spark standalone cluster is automatically started when the devcontainer is created, available at `spark://spark-localhost:7077`. 
+
+Experiment interactively with:
+```sh
+spark-shell --master spark://spark-localhost:7077
+```
+
+Or with Jupyter Lab (including Almond Scala kernel & LSP support):
+```
+jupyter lab
+# ...
+#    Or copy and paste one of these URLs:
+#        http://localhost:8888/lab?token=...
+#        http://127.0.0.1:8888/lab?token=...
+# ...
+```
+You can monitor the cluster at `http://localhost:8080`, the history server at `http://localhost:18080`, and more granularly at `$SPARK_HOME/logs/`.
+
+Note: VSCode notebooks do not communicate correctly with ALmond kernel, leading to non existent autocomplete support, so I recommend using Jupyter Lab directly.
+
 # Credits
 - https://github.com/datablist/sample-csv-files for `./data/customers-100.csv`.
 - https://file-examples.com/index.php/sample-images-download/sample-tiff-download/ for `./data/0x00000001-0x00000002-0x00000001.tiff` (downsampled).
