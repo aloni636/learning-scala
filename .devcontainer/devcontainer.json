@@ -31,7 +31,8 @@
         // NOTE: this command was supposed to be executed by ubuntu user, but we only have root to run commands at container creation, so we run it as root and chown it
         "linkJupyterConfig": "mkdir -p ~/.jupyter && ln -s /workspaces/${localWorkspaceFolderBasename}/jupyter_server_config.json /home/ubuntu/.jupyter/jupyter_server_config.json && chown -R ubuntu:ubuntu /home/ubuntu/.jupyter"
     },
-    "postAttachCommand": {
+    // runs as remoteUser 'ubuntu'
+    "postStartCommand": {
         "startSpark": "${containerWorkspaceFolder}/scripts/start-spark.sh"
     },
     // NOTE: More ports will be forwarded by VSCode automatically, but those are the main spark ones exposed via start-spark.sh
