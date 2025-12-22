@@ -27,11 +27,11 @@
         "linkSparkConfig": "ln -s /workspaces/${localWorkspaceFolderBasename}/spark-defaults.conf ${containerEnv:SPARK_HOME}/conf/spark-defaults.conf",
         // Mounting a volume sets root as owner, so we need to chown it to ubuntu
         // NOTE: running as root user (see containerUser), so no sudo needed
-        "chownSparkEvents": "chown -R ubuntu:ubuntu /var/spark-events"
+        "chownSparkEvents": "chown -R ubuntu:ubuntu /var/spark-events",
+        // NOTE: this command was supposed to be executed by ubuntu user, but we only have root to run commands at container creation, so we run it as root and chown it
+        "linkJupyterConfig": "mkdir -p ~/.jupyter && ln -s /workspaces/${localWorkspaceFolderBasename}/jupyter_server_config.json /home/ubuntu/.jupyter/jupyter_server_config.json && chown -R ubuntu:ubuntu /home/ubuntu/.jupyter"
     },
     "postAttachCommand": {
-        // NOTE: requires linking to home, therefore we run it as 'ubuntu' user (using postAttachCommand instead of postCreateCommand which runs as root)
-        "linkJupyterConfig": "mkdir -p ~/.jupyter && ln -s /workspaces/${localWorkspaceFolderBasename}/jupyter_server_config.json ~/.jupyter/jupyter_server_config.json",
         "startSpark": "${containerWorkspaceFolder}/scripts/start-spark.sh"
     },
     // NOTE: More ports will be forwarded by VSCode automatically, but those are the main spark ones exposed via start-spark.sh
