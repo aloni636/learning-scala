@@ -11,11 +11,17 @@
         "--hostname",
         "spark-localhost"
     ],
-    // Persist /var/spark-events between container restarts
     "mounts": [
+        // Persist /var/spark-events between container restarts
         {
             "source": "${localWorkspaceFolderBasename}-spark-events",
             "target": "/var/spark-events",
+            "type": "volume"
+        },
+        // persist coursier cache between container restarts
+        {
+            "source": "${localWorkspaceFolderBasename}-coursier-cache",
+            "target": "/home/ubuntu/.cache/coursier",
             "type": "volume"
         }
     ],
@@ -33,9 +39,11 @@
     },
     // runs as remoteUser 'ubuntu'
     "postStartCommand": {
-        "startSpark": "${containerWorkspaceFolder}/scripts/start-spark.sh"
+        "startSpark": "${containerWorkspaceFolder}/scripts/start-spark.sh",
+        // NOTE: we redirect to /dev/null to prevent nohup from streaming the output to ./nohup.out
+        "startJupyter": "nohup bash -c 'jupyter lab --no-browser --ip=127.0.0.1 --port=8888 > .jupyter.log 2>&1 &' > /dev/null"
     },
-    // NOTE: More ports will be forwarded by VSCode automatically, but those are the main spark ones exposed via start-spark.sh
+    // NOTE: More ports will be forwarded by VSCode automatically, but those are the main ones used by scripts in ./scripts/
     "forwardPorts": [
         8080,  // Spark Master Web UI
         8081,  // Spark Worker Web UI
