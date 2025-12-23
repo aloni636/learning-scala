@@ -142,7 +142,7 @@ RUN curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py \
     && python3.12 /tmp/get-pip.py --break-system-packages --root-user-action=ignore \
     && rm /tmp/get-pip.py
 # Install jupyterlab
-RUN pip3 install --no-cache-dir --break-system-packages --root-user-action=ignore jupyterlab jupyterlab-lsp
+RUN pip3 install --no-cache-dir --break-system-packages --root-user-action=ignore 'jupyterlab>=4.1.0,<5.0.0a0' jupyterlab-lsp
 
 USER ${USERNAME}
 RUN cs install metals --install-dir ~/.local/share/coursier/bin

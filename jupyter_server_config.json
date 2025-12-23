@@ -3,7 +3,7 @@
     "language_servers": {
       "metals": {
         "version": 2,
-        "argv": ["metals"],
+        "argv": ["/home/ubuntu/.local/share/coursier/bin/metals"],
         "languages": ["scala"],
         "mime_types": ["text/x-scala"]
       }
