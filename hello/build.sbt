@@ -1,4 +1,8 @@
 scalaVersion := "2.13.8"
+// NOTE: Using 2.13.8, we hit eviction issues with GeoTrellis requiring 2.13.16,
+// but I have to use 2.13.8 because I want Spark 3.3.4 to be rock solid with Almond.
+allowUnsafeScalaLibUpgrade := true
+
 // For Ex02
 libraryDependencies += "com.github.tototoshi" %% "scala-csv" % "2.0.0"
 
