@@ -59,8 +59,8 @@ object Ex04 extends Exercise {
 
     // Async filesystem IO
     val tiffPaths = List(
-      "../data/0x00000001-0x00000002-0x00000001.tiff",
-      "../data/0x00000001-0x00000002-0x00000003.tiff"
+      "./data/0x00000001-0x00000002-0x00000001.tiff",
+      "./data/0x00000001-0x00000002-0x00000003.tiff"
     )
     def scheduleTiffRead(path: String)(implicit log: Logger) = Future {
       val tiffFile = Paths.get(path)

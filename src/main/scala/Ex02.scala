@@ -55,7 +55,7 @@ object Ex02 extends Exercise {
     // ANSWER: Because List has a companion singleton List instance responsible for
     //         instantiating List instances via static constructor wrappers
     println(s"Current working directory: ${new File(".").getAbsoluteFile()}")
-    val csvFile = new File("../data/customers-100.csv")
+    val csvFile = new File("./data/customers-100.csv")
     if (!csvFile.exists())
       throw new FileNotFoundException(
         s"Couldn't find ${csvFile}\nMake sure to download it from https://github.com/datablist/sample-csv-files"

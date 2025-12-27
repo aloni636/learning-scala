@@ -146,7 +146,7 @@ object Ex05 extends Exercise {
     // See: https://github.com/locationtech/geotrellis/blob/master/docs/raster/ReadingGeoTiffs.md
     // NOTE: Using the old (pre geotrellis-3) raster readers
     val everestTiff = SinglebandGeoTiff(
-      "../data/Everest_COP30.tif"
+      "./data/Everest_COP30.tif"
     )
     val everestWgs = everestTiff.projectedRaster
 
@@ -184,8 +184,8 @@ object Ex05 extends Exercise {
     // NOTE: I use `GeoTiff.mapTile` / `ProjectedRaster.mapTile` / `GeoTiff.copy(tile = ...)`
     // to avoid accessing deeply nested geotrellis objects properties each time I want to do some operation
     val slopes = everest.mapTile(t => t.slope(everest.cellSize))
-    // visualizeTile(everest, "../visualizations/everest")
-    // visualizeTile(slopes, "../visualizations/slopes")
+    // visualizeTile(everest, "./visualizations/everest")
+    // visualizeTile(slopes, "./visualizations/slopes")
 
     /* Compute all slope based islands which are at least 70% visible from the highest point in mount everest
      * - Local, focal, zonal & global operations:
@@ -241,8 +241,8 @@ object Ex05 extends Exercise {
       t.mapIfSet(rid => if (viewshedRegionIds.contains(rid)) rid else NODATA)
     )
 
-    visualizeTile(slopeRegions, "../visualizations/slopeRegions")
-    visualizeTile(visibleSlopeRegions, "../visualizations/visibleSlopeRegions")
-    visualizeTile(viewshed, "../visualizations/viewshed")
+    visualizeTile(slopeRegions, "./visualizations/slopeRegions")
+    visualizeTile(visibleSlopeRegions, "./visualizations/visibleSlopeRegions")
+    visualizeTile(viewshed, "./visualizations/viewshed")
   }
 }

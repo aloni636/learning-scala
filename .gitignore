@@ -77,6 +77,8 @@ project/**/metals.sbt
 visualizations/
 data/himalayas
 data/taxi
+output/
+
 
 # jupyterlab
 .virtual_documents

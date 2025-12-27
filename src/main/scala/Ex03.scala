@@ -271,7 +271,7 @@ object Ex03 extends Exercise {
       TileIndex(index)
     }
 
-    val tileStore: Path = Paths.get("../data/")
+    val tileStore: Path = Paths.get("./data/")
     println(s"Read tileKey1 into disk: ${readFromDisk(tileStore, tileKey1)}")
     println(
       s"Read tileKey3 into disk (explicit desugar): ${readFromDisk(tileStore, tileKeyToTileIndex(tileKey3))}"
@@ -462,7 +462,7 @@ object Ex03 extends Exercise {
       // NOTE: Both `fmt` and `log` are implicit
       val implicitlyFmt = implicitly[TileFormatter[A]]
       log.info(s"implicitlyFmt=${implicitlyFmt}, fmt=${fmt}")
-      println(s"Are implicitlyFmt and fmt the same? ${fmt==implicitlyFmt}")
+      println(s"Are implicitlyFmt and fmt the same? ${fmt == implicitlyFmt}")
       val formatted = fmt.format(someTile)
 
       println(

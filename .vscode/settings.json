@@ -4,7 +4,6 @@
         "**/.bloop": true,
         "**/.metals": true,
         "**/.bsp": true,
-        "**/target": true,
         // JupyterLab
         ".virtual_documents": true,
         ".ipynb_checkpoints": true,
@@ -19,7 +18,9 @@
         "gdal",
         "geotrellis",
         "insitaintaing",
+        "jupyterlab",
         "NODATA",
+        "nohup",
         "pprintln",
         "Reproject",
         "Reprojected",

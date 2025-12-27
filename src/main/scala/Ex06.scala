@@ -30,7 +30,34 @@ package hello
  * Think “OSM roads as vector layer, rasterized onto same layout”.
  */
 
+/*
+B. Regions (tile-friendly, Spark-justifying)
+
+These were chosen to (a) have strong terrain signal and (b) justify tiling + distributed processing without cloud-scale storage.
+
+1. Himalayas (excellent default)
+
+   - Lon: `80 .. 95`
+   - Lat: `25 .. 35`
+   - ~150 tiles
+   - Extreme relief → slopes, viewshed, cost-distance all become meaningful.
+
+2. Andes (clean alternative, southern hemisphere)
+
+   - Lon: `-80 .. -70`
+   - Lat: `-20 .. 0`
+   - Similar tile count
+   - Long continuous mountain chains, fewer data quirks.
+
+3. Alps (smaller but dense)
+
+   - Lon: `5 .. 15`
+   - Lat: `44 .. 48`
+   - Fewer tiles, but very high signal density.
+   - Good if you want faster iteration with real terrain complexity.
+ */
+
 object Ex06 extends Exercise {
   override def run(): Unit = {}
-    
+
 }

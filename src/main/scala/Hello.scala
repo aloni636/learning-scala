@@ -57,6 +57,7 @@ object Main {
         hello.Ex03,
         hello.Ex04,
         hello.Ex05,
+        hello.Ex05_5,
         hello.Ex06
       ).map(x => x.name -> x)
     )
