@@ -5,205 +5,82 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.conf.Configuration
 import org.apache.log4j.Logger
+import java.sql.Timestamp
+import java.time.Duration
+import java.time.Instant
+import com.github.tototoshi.csv._
+import java.io.{File, FileNotFoundException}
 
 /*
+  ### 6. RDD Aggregation Mechanics (Taxi Analytics)
 
-## Question 1 - Zone-to-Zone Flow Efficiency
+  Goal: build correct performance intuition for RDD-based analytics by grinding through
+  realistic fact-table aggregations with no shortcuts.
 
-### Business question
+  Focus:
+  - key/value modeling
+  - shuffles and memory pressure
+  - accumulator design
+  - multi-stage aggregation
+  - sorting and ranking
+ */
 
-> For each **pickup -> drop-off zone pair**, compute:
->
-> * trip count
-> * average trip duration
-> * average speed
-> * average fare per mile
->   Then rank the **top 20 busiest flows** during weekday rush hours.
+/*
+  ### 1. Zone-to-Zone Flow Efficiency
 
----
+  Task:
+  - For each pickup → drop-off zone pair:
+    - trip count
+    - avg duration
+    - avg speed
+    - avg fare per mile
+  - Rank top 20 busiest weekday rush-hour flows.
 
-This is a **pure fact-table grind** with:
+  Forces:
+  - composite keys `(PU, DO)`
+  - early filtering
+  - `aggregateByKey` / `combineByKey`
+  - custom accumulators
+  - post-aggregation metrics
 
-- composite keys
-- heavy shuffles
-- multi-metric aggregation
+  APIs:
+  `map`, `filter`, `keyBy`, `aggregateByKey`, `mapValues`, `sortBy`, `takeOrdered`
+ */
 
-DataFrames make this trivial.
-RDDs force you to *understand the mechanics*.
+/*
+  ### 2. Zone Demand Volatility
 
----
+  Task:
+  - For each pickup zone:
+    - hourly trip counts
+    - demand volatility (variance / range)
+  - Rank zones by instability.
 
-### RDD concepts you’ll have to use
+  Forces:
+  - time bucketing
+  - `(zone, hour)` → `zone` reshaping
+  - `groupByKey` (then replacing it)
+  - manual statistics
 
-#### Parsing & projection
+  APIs:
+  `map`, `reduceByKey`, `aggregateByKey`, `groupByKey`, `mapPartitions`
+ */
 
-- `map` - parse rows into typed case classes
-- Drop unused columns early (memory pressure)
+/*
+  ### Why these two are sufficient
 
-#### Key modeling
-- Composite keys: `(PULocationID, DOLocationID)`
-- Time filters before shuffle
+  Together they teach:
+  - key/value modeling
+  - shuffle behavior
+  - memory pressure intuition
+  - accumulator design
+  - multi-stage aggregation
 
-#### Aggregation
-- `mapValues`
-- `reduceByKey`
-- Or `aggregateByKey` / `combineByKey` (better)
+  Run both with:
+  1. RDDs
+  2. DataFrames
 
-You’ll need to accumulate:
-- count
-- sum(duration)
-- sum(distance)
-- sum(fare)
-
-This forces you to design:
-- accumulator structs
-- associative merge logic
-
-#### Derived metrics
-
-- Average speed = distance / duration
-- Fare per mile
-- Requires **post-aggregation map**
-
-#### Sorting & ranking
-
-- `sortBy`
-- `takeOrdered`
-
----
-
-### APIs you will touch
-- `map`
-- `filter`
-- `keyBy`
-- `reduceByKey` / `aggregateByKey`
-- `mapValues`
-- `sortBy`
-- `take` / `takeOrdered`
-- `persist`
-
-This single question covers **70% of real RDD usage**.
-
----
-
-## Question 2 - Time-Weighted Zone Demand Volatility
-
-### Business question
-
-> For each pickup zone:
->
-> * Compute hourly trip counts
-> * Measure how volatile demand is across the day
-> * Rank zones by **demand instability**
-
-In plain terms:
-
-> Which neighborhoods have the most *uneven* taxi demand?
-
----
-
-### Why this one is important
-
-This introduces:
-
-- time bucketing
-- secondary grouping
-- multi-stage aggregation
-- nested key logic
-
----
-
-### RDD mechanics it forces
-
-#### Time normalization
-
-- Extract hour from timestamp
-- You must decide:
-
-  - pre-bucket
-  - or group then bucket
-
-#### Hierarchical keys
-
-You will naturally form:
-
-- `(zone, hour)` -> count
-- Then regroup by `zone`
-
-This **forces you to reshape keys**.
-
-#### Multi-stage aggregation
-
-Likely pipeline:
-
-1. `(zone, hour)` -> count
-2. `zone` -> list of hourly counts
-3. compute variance / stddev / range
-
-That means:
-
-- `map`
-- `reduceByKey`
-- `groupByKey` (and learning *why it hurts*)
-- Or smarter `aggregateByKey`
-
-#### Custom statistics
-
-You’ll compute:
-
-- mean
-- variance
-- max / min
-
-No library help. You own the math.
-
----
-
-### APIs you will touch
-
-- `map`
-- `filter`
-- `reduceByKey`
-- `aggregateByKey`
-- `groupByKey (and regret it)`
-- `mapPartitions`
-- `persist`
-
----
-
-## Why these two together are enough
-
-Combined, they force you to learn:
-- Key/value modeling
-- Composite keys
-- Accumulators
-- Shuffle behavior
-- Memory pressure
-- Multi-stage aggregation
-- Sorting
-- Performance intuition
-
-Without:
-- streaming
-- joins
-- GIS
-- DataFrames
-- artificial toy logic
-
----
-
-Do **both** questions:
-
-1. First with **RDDs only**
-2. Then redo them with **DataFrames**
-
-Compare:
-- line count
-- mental load
-- Spark UI
-- shuffle size
-- execution time
-
+  Compare code size, mental load, Spark UI, and shuffle cost.
  */
 
 object Ex05_5 extends Exercise {
@@ -211,11 +88,13 @@ object Ex05_5 extends Exercise {
   //       meaning we can't load objects dependent on its existence within sbt run.
   //       This means the runner must be a dedicated object.
   override def run(): Unit = {
-    SparkRunner.runSparkJob("Ex05_5_Job")
+    SparkRunner.runSparkJob("Ex05_5_DF_Job", build = true)
+    println("[Exercises] Finished 'Ex05_5_DF_Job', running 'Ex05_5_RDD_Job'")
+    SparkRunner.runSparkJob("Ex05_5_RDD_Job", build = false)
   }
 }
 
-object Ex05_5_Job {
+abstract class Ex05_5_Job {
   object SchemaEnforcer {
     // format: off
     val schema = T.StructType(
@@ -268,16 +147,21 @@ object Ex05_5_Job {
       df.select(newCols: _*)
     }
   }
+
+  def task(taxi: DataFrame, zones: DataFrame)(implicit
+      spark: SparkSession
+  ): Unit
+
   def main(args: Array[String]): Unit = {
-    val spark = SparkSession
+    implicit val spark = SparkSession
       .builder()
       .appName("Ex05_5")
       .master(s"spark://spark-localhost:7077")
       .config("spark.executor.memory", "4g")
       .getOrCreate()
     val sc = spark.sparkContext
-
     sc.setLogLevel("WARN")
+
     import spark.implicits._
     implicit val log = Logger.getLogger(this.getClass())
 
@@ -294,18 +178,28 @@ object Ex05_5_Job {
     val normParquets = parquets.map(
       SchemaEnforcer
         .enforce(_)
-        // .select(
-        //   "tpep_pickup_datetime",
-        //   "tpep_dropoff_datetime",
-        //   "trip_distance",
-        //   "fare_amount",
-        //   "PULocationID",
-        //   "DOLocationID"
-        // )
     )
     val taxi = normParquets
       .reduce((a, b) => a.unionByName(b))
-    // .persist(StorageLevel.MEMORY_ONLY)
+    val zones = spark.read
+      .option("header", "true")
+      .csv("/workspaces/*/data/taxi/taxi_zone_lookup.csv")
+      .select(
+        $"LocationID".cast(T.IntegerType),
+        $"Borough",
+        $"Zone"
+      )
+    this.task(taxi, zones)
+  }
+}
+
+object Ex05_5_DF_Job extends Ex05_5_Job {
+
+  def task(
+      taxi: DataFrame,
+      zones: DataFrame
+  )(implicit spark: SparkSession): Unit = {
+    import spark.implicits._
 
     val pickupsPerHour = taxi
       .select(
@@ -328,10 +222,13 @@ object Ex05_5_Job {
       .head
 
     val rushHours = pickupsPerHour.filter(
-      $"pickups_per_hour" > percentile
+      $"pickups_per_hour" >= percentile
     )
 
     val rushHoursArr = rushHours.select($"hour").as[Int].collect
+    println(
+      s"[Exercises] rushHoursArr: ${rushHoursArr.mkString("[", ",", "]")}"
+    )
 
     val duration_minutes =
       (F.unix_timestamp($"tpep_dropoff_datetime") - F.unix_timestamp(
@@ -347,37 +244,28 @@ object Ex05_5_Job {
         F.avg($"trip_distance" / (duration_minutes / 60)).alias("avg_mph"),
         F.avg($"fare_amount" / $"trip_distance").alias("avg_fare_per_mile")
       )
-    // .cache()
-
-    val zones = spark.read
-      .option("header", "true")
-      .csv("/workspaces/*/data/taxi/taxi_zone_lookup.csv")
-      .select(
-        $"LocationID".cast(T.IntegerType),
-        $"Borough",
-        $"Zone"
-      )
 
     val rushHourStatisticsWithZones = rushHourStatistics
       .join(
-        zones.select(
-          $"LocationID".alias("PULocationID"),
-          $"Borough".alias("PU_Borough"),
-          $"Zone".alias("PU_Zone")
-        ),
+        F.broadcast(zones)
+          .select(
+            $"LocationID".alias("PULocationID"),
+            $"Borough".alias("PU_Borough"),
+            $"Zone".alias("PU_Zone")
+          ),
         Seq("PULocationID"),
         "left"
       )
       .join(
-        zones.select(
-          $"LocationID".alias("DOLocationID"),
-          $"Borough".alias("DO_Borough"),
-          $"Zone".alias("DO_Zone")
-        ),
+        F.broadcast(zones)
+          .select(
+            $"LocationID".alias("DOLocationID"),
+            $"Borough".alias("DO_Borough"),
+            $"Zone".alias("DO_Zone")
+          ),
         Seq("DOLocationID"),
         "left"
       )
-    // .cache()
 
     val top20BusiestFlows =
       rushHourStatisticsWithZones.orderBy($"count".desc).limit(20)
@@ -385,7 +273,219 @@ object Ex05_5_Job {
       .option("header", "true")
       .mode("overwrite")
       .csv(
-        "/workspaces/learning-scala/output/rush_hour_top20_busiest_flows.csv"
+        "/workspaces/learning-scala/output/df_rush_hour_top20_busiest_flows.csv"
       )
+  }
+
+}
+
+object Ex05_5_RDD_Job extends Ex05_5_Job {
+  case class TaxiRecord(
+      tpep_pickup_datetime: Timestamp,
+      tpep_dropoff_datetime: Timestamp,
+      trip_distance: Double,
+      fare_amount: Double,
+      PULocationID: Int,
+      DOLocationID: Int
+  )
+
+  case class ZonesRecord(
+      LocationID: Int,
+      Borough: String,
+      Zone: String
+  )
+
+  case class Statistics(
+      var count: Long,
+      var avg_duration_minutes: Double,
+      var avg_mph: Double,
+      var avg_fare_per_mile: Double
+  )
+
+  case class StatState(
+      var count: Long = 0,
+      var avg_duration_minutes: AvgState = AvgState(),
+      var avg_mph: AvgState = AvgState(),
+      var avg_fare_per_mile: AvgState = AvgState()
+  )
+
+  case class AvgState(
+      var count: Long = 0,
+      var value: Double = 0
+  ) {
+    def consume(item: Double): Unit = {
+      if (!item.isNaN() && !item.isInfinite()) {
+        this.count += 1
+        this.value += item
+      }
+    }
+    def getAvg(): Double = {
+      this.value / this.count
+    }
+    def combine(other: AvgState): Unit = {
+      this.count += other.count
+      this.value += other.value
+    }
+  }
+
+  case class TripZones(
+      PULocationID: Int,
+      PU_Borough: String,
+      PU_Zone: String,
+      DOLocationID: Int,
+      DO_Borough: String,
+      DO_Zone: String
+  )
+
+  def task(taxi: DataFrame, zones: DataFrame)(implicit
+      spark: SparkSession
+  ): Unit = {
+    import spark.implicits._
+    val sc = spark.sparkContext
+
+    val taxiRdd = taxi.rdd.map { r =>
+      TaxiRecord(
+        r.getAs[Timestamp]("tpep_pickup_datetime"),
+        r.getAs[Timestamp]("tpep_dropoff_datetime"),
+        r.getAs[Double]("trip_distance"),
+        r.getAs[Double]("fare_amount"),
+        r.getAs[Int]("PULocationID"),
+        r.getAs[Int]("DOLocationID")
+      )
+    }
+    val zonesRdd = zones.rdd.map(r =>
+      ZonesRecord(
+        r.getAs[Int]("LocationID"),
+        r.getAs[String]("Borough"),
+        r.getAs[String]("Zone")
+      )
+    )
+    val pickupsPerHour = taxiRdd
+      .map(r => r.tpep_pickup_datetime)
+      .filter(ts =>
+        2 to 6 contains ts.toLocalDateTime().getDayOfWeek().getValue
+      )
+      .map { ts =>
+        (
+          ts.toLocalDateTime().getHour(),
+          1
+        )
+      }
+      .reduceByKey(_ + _)
+
+    val rushHoursArr = {
+      val sorted = pickupsPerHour.collect.sortBy(
+        { case (_, count) => count }
+      )
+      sorted.slice((sorted.size * 0.9).floor.toInt, sorted.size)
+    }.map { case (hour, _) => hour }
+    println(
+      s"[Exercises] rushHoursArr: ${rushHoursArr.mkString("[", ",", "]")}"
+    )
+
+    def getDurationMinutes(pickup: Timestamp, dropoff: Timestamp): Double = {
+      Duration
+        .between(pickup.toInstant(), dropoff.toInstant())
+        .getSeconds()
+        .toDouble / 60
+    }
+    val rushHourStatistics = taxiRdd
+      .filter(r =>
+        rushHoursArr contains r.tpep_pickup_datetime.toLocalDateTime().getHour()
+      )
+      .map { r =>
+        (
+          (
+            r.PULocationID,
+            r.DOLocationID
+          ),
+          r
+        )
+      }
+      .aggregateByKey(
+        StatState()
+      )(
+        // reduce partition to a single value
+        (stats, r) => {
+          stats.count += 1
+          val duration_minutes = getDurationMinutes(
+            r.tpep_pickup_datetime,
+            r.tpep_dropoff_datetime
+          )
+          stats.avg_duration_minutes.consume(duration_minutes)
+          stats.avg_mph.consume(r.trip_distance / (duration_minutes / 60))
+          stats.avg_fare_per_mile.consume(r.fare_amount / r.trip_distance)
+          stats
+        },
+        // combine partition results
+        (statsA, statsB) => {
+          statsA.count += statsB.count
+          statsA.avg_duration_minutes.combine(statsB.avg_duration_minutes)
+          statsA.avg_mph.combine(statsB.avg_mph)
+          statsA.avg_fare_per_mile.combine(statsB.avg_fare_per_mile)
+          statsA
+        }
+      )
+      .mapValues(stats =>
+        Statistics(
+          stats.count,
+          stats.avg_duration_minutes.getAvg(),
+          stats.avg_mph.getAvg(),
+          stats.avg_fare_per_mile.getAvg()
+        )
+      )
+    // broadcast join
+    val broadcastZonesMap =
+      sc.broadcast(zonesRdd.collect().map(r => r.LocationID -> r).toMap)
+    val rushHourStatisticsWithZones = rushHourStatistics.map {
+      case ((puLocationID, doLocationID), stats) =>
+        (
+          stats,
+          TripZones(
+            PULocationID = puLocationID,
+            PU_Borough = broadcastZonesMap.value(puLocationID).Borough,
+            PU_Zone = broadcastZonesMap.value(puLocationID).Zone,
+            DOLocationID = doLocationID,
+            DO_Borough = broadcastZonesMap.value(doLocationID).Borough,
+            DO_Zone = broadcastZonesMap.value(doLocationID).Zone
+          )
+        )
+    }
+    val top20BusiestFlows =
+      rushHourStatisticsWithZones.top(20)(
+        Ordering.by { case (stats, _) => stats.count }
+      )
+    val csvFile = new File("./output/rdd_rush_hour_top20_busiest_flows.csv")
+    val csvWriter = CSVWriter.open(csvFile, append = false)
+    csvWriter.writeRow(
+      Seq(
+        "DOLocationID",
+        "PULocationID",
+        "count",
+        "avg_duration_minutes",
+        "avg_mph",
+        "avg_fare_per_mile",
+        "PU_Borough",
+        "PU_Zone",
+        "DO_Borough",
+        "DO_Zone"
+      )
+    )
+    top20BusiestFlows
+      .map { case (stats, zones) =>
+        Seq(
+          zones.DOLocationID,
+          zones.PULocationID,
+          stats.count,
+          stats.avg_duration_minutes,
+          stats.avg_mph,
+          stats.avg_fare_per_mile,
+          zones.PU_Borough,
+          zones.PU_Zone,
+          zones.DO_Borough,
+          zones.DO_Zone
+        )
+      }
+      .foreach(csvWriter.writeRow)
   }
 }

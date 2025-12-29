@@ -10,17 +10,19 @@ trait Exercise {
 }
 
 object SparkRunner {
-  def runSparkJob(className: String): Unit = {
-    println("Creating JAR file...")
-    val sbtPackage = os
-      .proc(
-        "sbt",
-        "package"
-      )
-      .spawn(cwd = os.pwd, stdout = os.Inherit, stderr = os.Inherit)
-    sbtPackage.waitFor(-1)
+  def runSparkJob(className: String, build: Boolean): Unit = {
+    if (build) {
+      println("[Exercises] Assembling fat JAR...")
+      val sbtAssembly = os
+        .proc(
+          "sbt",
+          "assembly"
+        )
+        .spawn(cwd = os.pwd, stdout = os.Inherit, stderr = os.Inherit)
+      sbtAssembly.waitFor(-1)
+    }
 
-    println("Submitting spark job...")
+    println("[Exercises] Submitting spark job...")
     val driver = os
       .proc(
         "spark-submit",
@@ -30,7 +32,7 @@ object SparkRunner {
         s"hello.${className}",
         "--deploy-mode",
         "client",
-        "/workspaces/learning-scala/target/scala-2.13/learning-scala_2.13-0.1.0-SNAPSHOT.jar"
+        "/workspaces/learning-scala/target/scala-2.13/learning-scala-assembly-0.1.0-SNAPSHOT.jar"
       )
       .spawn(cwd = os.pwd, stdout = os.Inherit, stderr = os.Inherit)
     driver.waitFor(-1)
