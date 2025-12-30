@@ -1,6 +1,6 @@
 // scala 2.13
-package hello
-import hello.Exercise
+package learningscala
+import learningscala.Exercise
 import scala.io
 import scala.collection.immutable.ListMap
 import scala.collection.immutable.ListMapBuilder
@@ -52,13 +52,13 @@ object Main {
     val exercises = ListMap.from(
       List(
         // TODO: Find a way to auto-discover Exercise extenders
-        hello.Ex01,
-        hello.Ex02,
-        hello.Ex03,
-        hello.Ex04,
-        hello.Ex05,
-        hello.Ex05_5,
-        hello.Ex06
+        learningscala.Ex01,
+        learningscala.Ex02,
+        learningscala.Ex03,
+        learningscala.Ex04,
+        learningscala.Ex05,
+        learningscala.Ex06,
+        learningscala.Ex07
       ).map(x => x.name -> x)
     )
     val availableExercises = s"[${exercises.keys.mkString(", ")}]"

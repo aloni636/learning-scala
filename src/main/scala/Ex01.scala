@@ -1,6 +1,6 @@
-package hello
+package learningscala
 import scala.io
-import hello.Exercise
+import learningscala.Exercise
 
 /*
   ---

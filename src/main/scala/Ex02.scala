@@ -1,4 +1,4 @@
-package hello
+package learningscala
 
 import scala.io
 import java.{io => jio}
@@ -9,7 +9,7 @@ import java.time.temporal.ChronoUnit
 import com.github.tototoshi.csv._
 import org.slf4j.LoggerFactory
 import pprint.pprintln
-import hello.Exercise
+import learningscala.Exercise
 
 /*
   ---

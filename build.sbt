@@ -11,7 +11,7 @@ lazy val hello = (project in file("."))
     // NOTE: Using 2.13.8, we hit eviction issues with GeoTrellis requiring 2.13.16,
     //       but I have to use 2.13.8 because I want Spark 3.3.4 to be rock solid with Almond.
     allowUnsafeScalaLibUpgrade := true,
-    Compile / mainClass := Some("hello.Main"),
+    Compile / mainClass := Some("learningscala.Main"),
     libraryDependencies ++= Seq(
       // For Ex02 and beyond
       "ch.qos.logback" % "logback-classic" % "1.4.14",
@@ -36,7 +36,7 @@ lazy val hello = (project in file("."))
     // Name the resulting fat jar predictably: learning-scala-assembly-<version>.jar
     assembly / assemblyJarName := s"${name.value}-assembly-${version.value}.jar",
     // Ensure the assembled jar has the right entrypoint when needed
-    assembly / mainClass := Some("hello.Main"),
+    assembly / mainClass := Some("learningscala.Main"),
     // Robust merge strategy to avoid common conflicts (META-INF, services, HOCON, module-info)
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", xs @ _*) =>

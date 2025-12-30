@@ -1,5 +1,5 @@
-package hello
-import hello.Exercise
+package learningscala
+import learningscala.Exercise
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
 // NOTE: For some reason this makes Numeric types actually behave at the type system like numerics

@@ -1,4 +1,4 @@
-package hello
+package learningscala
 
 trait Exercise {
   final def name: String = {
@@ -29,7 +29,7 @@ object SparkRunner {
         "--master",
         "spark://spark-localhost:7077",
         "--class",
-        s"hello.${className}",
+        s"learningscala.${className}",
         "--deploy-mode",
         "client",
         "/workspaces/learning-scala/target/scala-2.13/learning-scala-assembly-0.1.0-SNAPSHOT.jar"

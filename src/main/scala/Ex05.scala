@@ -1,4 +1,4 @@
-package hello
+package learningscala
 // Geotrellis
 import geotrellis.raster._
 import geotrellis.raster.{isData, isNoData}
