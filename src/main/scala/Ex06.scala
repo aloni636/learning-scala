@@ -151,9 +151,11 @@ abstract class Ex6SparkJob {
   ): Unit
 
   def main(args: Array[String]): Unit = {
+    val name: String = this.getClass().getSimpleName().stripSuffix("$")
+
     implicit val spark = SparkSession
       .builder()
-      .appName("Ex05_5")
+      .appName(name)
       .master(s"spark://spark-localhost:7077")
       .config("spark.executor.memory", "4g")
       .getOrCreate()

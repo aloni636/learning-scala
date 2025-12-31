@@ -9,7 +9,7 @@ trait Exercise {
   def run(): Unit
 }
 
-// NOTE: We use a dedicated object to run Ex05_5 Spark job because Spark library is `% "provided"`,
+// NOTE: We use a dedicated object to run Spark jobs because Spark library is `% "provided"`,
 //       meaning we can't load objects dependent on its existence within sbt run.
 //       This means the runner must be a dedicated object.
 trait SparkExercise extends Exercise {
