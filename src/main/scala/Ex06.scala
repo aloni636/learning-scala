@@ -84,15 +84,15 @@ import java.io.{File, FileNotFoundException}
  */
 
 object Ex06 extends SparkExercise {
-  val jobs = Seq(
-    "Ex06DfJob01",
-    "Ex06RddJob01",
-    "Ex06DfJob02",
-    "Ex06RddJob02"
+  val programs = Seq(
+    "Ex06DfProgram01",
+    "Ex06RddProgram01",
+    "Ex06DfProgram02",
+    "Ex06RddProgram02"
   )
 }
 
-abstract class Ex6SparkJob {
+abstract class Ex6SparkProgram {
   object SchemaEnforcer {
     // format: off
     val schema = T.StructType(
@@ -193,7 +193,7 @@ abstract class Ex6SparkJob {
   }
 }
 
-object Ex06DfJob01 extends Ex6SparkJob {
+object Ex06DfProgram01 extends Ex6SparkProgram {
   def task(
       taxi: DataFrame,
       zones: DataFrame
@@ -226,7 +226,7 @@ object Ex06DfJob01 extends Ex6SparkJob {
 
     val rushHoursArr = rushHours.select($"hour").as[Int].collect
     println(
-      s"[Ex06DfJob01] rushHoursArr: ${rushHoursArr.mkString("[", ",", "]")}"
+      s"[Ex06DfProgram01] rushHoursArr: ${rushHoursArr.mkString("[", ",", "]")}"
     )
 
     val duration_minutes =
@@ -278,7 +278,7 @@ object Ex06DfJob01 extends Ex6SparkJob {
 
 }
 
-object Ex06RddJob01 extends Ex6SparkJob {
+object Ex06RddProgram01 extends Ex6SparkProgram {
   case class TaxiRecord(
       tpep_pickup_datetime: Timestamp,
       tpep_dropoff_datetime: Timestamp,
@@ -379,7 +379,7 @@ object Ex06RddJob01 extends Ex6SparkJob {
       sorted.slice((sorted.size * 0.9).floor.toInt, sorted.size)
     }.map { case (hour, _) => hour }
     println(
-      s"[Ex06RddJob01] rushHoursArr: ${rushHoursArr.mkString("[", ",", "]")}"
+      s"[Ex06RddProgram01] rushHoursArr: ${rushHoursArr.mkString("[", ",", "]")}"
     )
 
     def getDurationMinutes(pickup: Timestamp, dropoff: Timestamp): Double = {
@@ -489,7 +489,7 @@ object Ex06RddJob01 extends Ex6SparkJob {
   }
 }
 
-object Ex06DfJob02 extends Ex6SparkJob {
+object Ex06DfProgram02 extends Ex6SparkProgram {
   def task(taxi: DataFrame, zones: DataFrame)(implicit
       spark: SparkSession
   ): Unit = {
@@ -527,7 +527,7 @@ object Ex06DfJob02 extends Ex6SparkJob {
   }
 }
 
-object Ex06RddJob02 extends Ex6SparkJob {
+object Ex06RddProgram02 extends Ex6SparkProgram {
   case class TaxiRecord(
       PULocationID: Int,
       tpep_pickup_datetime: Timestamp
