@@ -48,3 +48,4 @@ Note: VSCode notebooks do not communicate correctly with Almond kernel, leading 
     BR: [86.983056, 27.957778]
     BL: [86.899444, 27.957778]
     ```
+- https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf for NYC-TLC data dictionary PDF.

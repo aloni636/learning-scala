@@ -31,7 +31,8 @@
         "Singleband",
         "tripdata",
         "typeclass",
-        "Viewshed"
+        "Viewshed",
+        "Welford"
     ],
     "metals.inlayHints.hintsXRayMode.enable": false
 }

@@ -87,6 +87,8 @@ object Ex06 extends SparkExercise {
   val jobs = Seq(
     "Ex06DfJob01",
     "Ex06RddJob01",
+    "Ex06DfJob02",
+    "Ex06RddJob02"
   )
 }
 
@@ -482,5 +484,180 @@ object Ex06RddJob01 extends Ex6SparkJob {
         )
       }
       .foreach(csvWriter.writeRow)
+  }
+}
+
+object Ex06DfJob02 extends Ex6SparkJob {
+  def task(taxi: DataFrame, zones: DataFrame)(implicit
+      spark: SparkSession
+  ): Unit = {
+    import spark.implicits._
+
+    val hourlyVolatilityPerPickup = taxi
+      .select(
+        $"PULocationID",
+        F.hour($"tpep_pickup_datetime").alias("hour")
+      )
+      .groupBy($"PULocationID", $"hour")
+      .agg(
+        F.count($"*").alias("count")
+      )
+      .groupBy(
+        $"PULocationID"
+      )
+      .agg(
+        F.variance($"count").alias("variance"),
+        (F.max($"count") - F.min($"count")).alias("min_max_diff")
+      )
+      .join(
+        zones.withColumnRenamed("LocationID", "PULocationID"),
+        Seq("PULocationID"),
+        "left"
+      )
+      .orderBy($"variance".desc)
+
+    hourlyVolatilityPerPickup.write
+      .option("header", "true")
+      .mode("overwrite")
+      .csv(
+        "/workspaces/learning-scala/output/df_hourly_volatility_per_pickup.csv"
+      )
+  }
+}
+
+object Ex06RddJob02 extends Ex6SparkJob {
+  case class TaxiRecord(
+      PULocationID: Int,
+      tpep_pickup_datetime: Timestamp
+  )
+
+  case class ZonesRecord(
+      LocationID: Int,
+      Borough: String,
+      Zone: String
+  )
+
+  // Welford / Chan online variance algorithm
+  // NOTE: On second thought it may be possible to do it with DoubleRDDFunctions, i.e. RDD[Double].
+  case class VarianceState(
+      var count: Long = 0L,
+      var mean: Double = 0,
+      var M2: Double = 0
+  ) {
+    def consume(x: Double): Unit = {
+      this.count += 1L
+      val delta = x - this.mean
+      this.mean += delta / this.count
+      this.M2 += delta * (x - this.mean)
+    }
+    def combine(other: VarianceState): VarianceState = {
+      val delta = other.mean - this.mean
+      val count = this.count + other.count
+      val mean = this.mean + delta * other.count / count
+      val M2 =
+        this.M2 + other.M2 + delta * delta * this.count * other.count / count
+      VarianceState(count, mean, M2)
+    }
+  }
+
+  case class StatState(
+      var variance: VarianceState,
+      var minCount: Long,
+      var maxCount: Long
+  )
+
+  case class Statistics(
+      variance: Double,
+      min_max_diff: Long
+  )
+
+  def task(taxi: DataFrame, zones: DataFrame)(implicit
+      spark: SparkSession
+  ): Unit = {
+    import spark.implicits._
+    val sc = spark.sparkContext
+
+    val taxiRdd = taxi.rdd.map { r =>
+      TaxiRecord(
+        r.getAs[Int]("PULocationID"),
+        r.getAs[Timestamp]("tpep_pickup_datetime")
+      )
+    }
+    val zonesRdd = zones.rdd.map(r =>
+      ZonesRecord(
+        r.getAs[Int]("LocationID"),
+        r.getAs[String]("Borough"),
+        r.getAs[String]("Zone")
+      )
+    )
+    val broadcastZonesMap =
+      sc.broadcast(zonesRdd.collect().map(r => r.LocationID -> r).toMap)
+
+    val hourlyVolatilityPerPickup = taxiRdd
+      .map { r =>
+        (
+          (r.PULocationID, r.tpep_pickup_datetime.toLocalDateTime().getHour()),
+          1
+        )
+      }
+      .reduceByKey(_ + _)
+      .map { case ((loc, hour), count) => (loc, count) }
+      // NOTE: combineByKey allows having a mutable zero value guaranteeing
+      //       it will not be shared across partitions, but consumes the first row
+      .combineByKey[StatState](
+        c => StatState(VarianceState(1, c, 0), c, c),
+        // reduce partition to a single value
+        (stat, r) => {
+          stat.variance.consume(r.toDouble)
+          stat.maxCount = math.max(stat.maxCount, r)
+          stat.minCount = math.min(stat.minCount, r)
+          stat
+        },
+        // combine partition results
+        (statA, statB) => {
+          statA.variance = statA.variance.combine(statB.variance)
+          statA.maxCount = math.max(statA.maxCount, statB.maxCount)
+          statA.minCount = math.min(statA.minCount, statB.minCount)
+          statA
+        }
+      )
+      .mapValues { stat =>
+        Statistics(
+          stat.variance.M2 / (stat.variance.count - 1),
+          stat.maxCount - stat.minCount
+        )
+      }
+      .map { case (loc, stat) =>
+        (
+          loc,
+          (stat, broadcastZonesMap.value(loc))
+        )
+      }
+      .sortBy({ case (loc, (stat, zone)) => stat.variance }, ascending = false)
+
+    hourlyVolatilityPerPickup
+      .map { case (loc, (stat, zone)) =>
+        (
+          loc,
+          stat.variance,
+          stat.min_max_diff,
+          zone.Borough,
+          zone.Zone
+        )
+      }
+      .toDF(
+        "PULocationID",
+        "variance",
+        "min_max_diff",
+        "Borough",
+        "Zone"
+      )
+      .repartition(1)
+      .write
+      .option("header", "true")
+      .mode("overwrite")
+      .csv(
+        "/workspaces/learning-scala/output/rdd_hourly_volatility_per_pickup.csv"
+      )
   }
 }
