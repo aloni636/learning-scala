@@ -83,15 +83,11 @@ import java.io.{File, FileNotFoundException}
   Compare code size, mental load, Spark UI, and shuffle cost.
  */
 
-object Ex06 extends Exercise {
-  // NOTE: We use a dedicated object to run Ex05_5 Spark job because Spark library is `% "provided"`,
-  //       meaning we can't load objects dependent on its existence within sbt run.
-  //       This means the runner must be a dedicated object.
-  override def run(): Unit = {
-    SparkRunner.runSparkJob("Ex06DfJob", build = true)
-    println("[Exercises] Finished 'Ex06DfJob', running 'Ex05_5_RDD_Job'...")
-    SparkRunner.runSparkJob("Ex06RddJob", build = false)
-  }
+object Ex06 extends SparkExercise {
+  val jobs = Seq(
+    "Ex06DfJob01",
+    "Ex06RddJob01",
+  )
 }
 
 abstract class Ex6SparkJob {
@@ -193,8 +189,7 @@ abstract class Ex6SparkJob {
   }
 }
 
-object Ex06DfJob extends Ex6SparkJob {
-
+object Ex06DfJob01 extends Ex6SparkJob {
   def task(
       taxi: DataFrame,
       zones: DataFrame
@@ -227,7 +222,7 @@ object Ex06DfJob extends Ex6SparkJob {
 
     val rushHoursArr = rushHours.select($"hour").as[Int].collect
     println(
-      s"[Exercises] rushHoursArr: ${rushHoursArr.mkString("[", ",", "]")}"
+      s"[Ex06DfJob01] rushHoursArr: ${rushHoursArr.mkString("[", ",", "]")}"
     )
 
     val duration_minutes =
@@ -279,7 +274,7 @@ object Ex06DfJob extends Ex6SparkJob {
 
 }
 
-object Ex06RddJob extends Ex6SparkJob {
+object Ex06RddJob01 extends Ex6SparkJob {
   case class TaxiRecord(
       tpep_pickup_datetime: Timestamp,
       tpep_dropoff_datetime: Timestamp,
@@ -380,7 +375,7 @@ object Ex06RddJob extends Ex6SparkJob {
       sorted.slice((sorted.size * 0.9).floor.toInt, sorted.size)
     }.map { case (hour, _) => hour }
     println(
-      s"[Exercises] rushHoursArr: ${rushHoursArr.mkString("[", ",", "]")}"
+      s"[Ex06RddJob01] rushHoursArr: ${rushHoursArr.mkString("[", ",", "]")}"
     )
 
     def getDurationMinutes(pickup: Timestamp, dropoff: Timestamp): Double = {
