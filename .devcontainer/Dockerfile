@@ -120,17 +120,6 @@ RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tm
     && /tmp/aws/install \
     && rm -rf /tmp/aws /tmp/awscliv2.zip
 
-# Additional utilities
-# NOTE: openjdk-17-source is installed for metals Java classes goto-definition support
-USER root
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    git \
-    bash \
-    less \
-    vim \
-    && rm -rf /var/lib/apt/lists/*
-
 # Install Python3.12
 USER root
 RUN apt-get update \
@@ -144,8 +133,20 @@ RUN curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py \
 # Install jupyterlab
 RUN pip3 install --no-cache-dir --break-system-packages --root-user-action=ignore 'jupyterlab>=4.1.0,<5.0.0a0' jupyterlab-lsp
 
+# Install metals for jupyterlab-lsp scala support
 USER ${USERNAME}
 RUN cs install metals --install-dir ~/.local/share/coursier/bin
+
+# Additional Utilities
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    git \
+    bash \
+    less \
+    vim \
+    tree \
+    && rm -rf /var/lib/apt/lists/*
 
 # NOTE: creating /var/spark-events before mounting (in devcontainer.json) ensures proper permissions
 USER root
