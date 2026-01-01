@@ -1,2 +1,2 @@
 #!/bin/bash
-spark-shell --master spark://spark-localhost:7077
+spark-shell --master spark://localhost:7077

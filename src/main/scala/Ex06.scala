@@ -156,7 +156,7 @@ abstract class Ex6SparkProgram {
     implicit val spark = SparkSession
       .builder()
       .appName(name)
-      .master(s"spark://spark-localhost:7077")
+      .master(s"spark://localhost:7077")
       .config("spark.executor.memory", "4g")
       .getOrCreate()
     val sc = spark.sparkContext

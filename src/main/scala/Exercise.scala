@@ -33,7 +33,7 @@ trait SparkExercise extends Exercise {
         .proc(
           "spark-submit",
           "--master",
-          "spark://spark-localhost:7077",
+          "spark://localhost:7077",
           "--class",
           s"learningscala.${program}",
           "--deploy-mode",

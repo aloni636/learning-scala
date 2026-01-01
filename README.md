@@ -14,13 +14,13 @@ I use a **cli argument dispatcher**, so you select an exercise by it's object na
 Create a new `Ex<>` file in `hello/src/main/scala`, and add an `Exercise` object with a `run` method. After that you should add it to the exercise list in `hello/src/main/scala/hello` and run it with `sbt "run Ex<>"`.
 
 # Running Spark Exercises
-A spark standalone cluster is automatically started when the devcontainer is created, available at `spark://spark-localhost:7077`. 
+A spark standalone cluster is automatically started when the devcontainer is created, available at `spark://localhost:7077`. 
 
 You can monitor the Spark cluster at `http://localhost:8080`, the history server at `http://localhost:18080`, and more granularly at `$SPARK_HOME/logs/`.
 
 Experiment interactively with:
 ```sh
-spark-shell --master spark://spark-localhost:7077
+spark-shell --master spark://localhost:7077
 ```
 
 A Jupyter-lab server is also automatically started (with Almond Scala kernel & .scala files LSP).

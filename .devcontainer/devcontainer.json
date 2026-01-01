@@ -9,7 +9,7 @@
         "--name",
         "${localWorkspaceFolderBasename}",
         "--hostname",
-        "spark-localhost"
+        "${localWorkspaceFolderBasename}"
     ],
     "mounts": [
         // Persist /var/spark-events between container restarts
