@@ -32,6 +32,7 @@
         "tripdata",
         "typeclass",
         "Viewshed",
+        "webui",
         "Welford"
     ],
     "metals.inlayHints.hintsXRayMode.enable": false

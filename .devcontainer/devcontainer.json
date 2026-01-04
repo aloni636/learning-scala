@@ -31,6 +31,7 @@
     "postCreateCommand": {
         // Link the custom spark-defaults.conf into SPARK_HOME/conf
         "linkSparkConfig": "ln -s /workspaces/${localWorkspaceFolderBasename}/spark-defaults.conf ${containerEnv:SPARK_HOME}/conf/spark-defaults.conf",
+        "linkSparkEnv": "ln -s /workspaces/${localWorkspaceFolderBasename}/spark-env.sh ${containerEnv:SPARK_HOME}/conf/spark-env.sh",
         // Mounting a volume sets root as owner, so we need to chown it to ubuntu
         // NOTE: running as root user (see containerUser), so no sudo needed
         "chownSparkEvents": "chown -R ubuntu:ubuntu /var/spark-events",
@@ -46,7 +47,9 @@
     // NOTE: More ports will be forwarded by VSCode automatically, but those are the main ones used by scripts in ./scripts/
     "forwardPorts": [
         8080,  // Spark Master Web UI
-        8081,  // Spark Worker Web UI
+        8081,  // Spark Worker 1 Web UI
+        8082,  // Spark Worker 2 Web UI
+        8083,  // Spark Worker 3 Web UI
         18080, // Spark History Server Web UI
         4040,  // Spark Application Web UI
         8888   // Jupyter Notebook

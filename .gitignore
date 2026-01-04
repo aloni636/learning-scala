@@ -79,7 +79,6 @@ data/himalayas
 data/taxi
 output/
 
-
 # jupyterlab
 .virtual_documents
 .ipynb_checkpoints
@@ -87,3 +86,6 @@ output/
 
 # jupyterlab autostart
 .jupyter.log
+
+# miscellaneous
+*.bak 
