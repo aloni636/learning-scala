@@ -1,4 +1,7 @@
 package learningscala
+import org.apache.log4j.Logger
+import org.apache.spark.SparkContext
+import org.apache.spark.sql.SparkSession
 
 trait Exercise {
   final def name: String = {
@@ -9,10 +12,18 @@ trait Exercise {
   def run(): Unit
 }
 
-// NOTE: We use a dedicated object to run Spark jobs because Spark library is `% "provided"`,
-//       meaning we can't load objects dependent on its existence within sbt run.
-//       This means the runner must be a dedicated object.
+/** Exercise runner for Spark-based exercises.
+  *
+  * Assembles the fat JAR using sbt-assembly and submits each specified program
+  * to a Spark cluster using `spark-submit`.
+  *
+  * @param programs
+  *   Sequence of fully qualified object names containing Spark programs to run.
+  */
 trait SparkExercise extends Exercise {
+  // NOTE: We use a dedicated object to run Spark jobs because Spark library is `% "provided"`,
+  //       meaning we can't load objects dependent on its existence within sbt run.
+  //       This means the runner must be a dedicated object.
   val programs: Seq[String]
   private def assemble() {
     println("[SparkExercise] Assembling fat JAR...")
@@ -24,7 +35,7 @@ trait SparkExercise extends Exercise {
       .spawn(cwd = os.pwd, stdout = os.Inherit, stderr = os.Inherit)
     sbtAssembly.waitFor(-1)
   }
-  def run(): Unit = {
+  final def run(): Unit = {
     this.assemble()
 
     this.programs.foreach { program =>
@@ -44,5 +55,30 @@ trait SparkExercise extends Exercise {
       driver.waitFor(-1)
       println(s"[SparkExercise] Finished program '${program}'")
     }
+  }
+}
+
+/** Trait to be extended by all Spark-based programs.
+  *
+  * Provides a standard `main` method that initializes a SparkSession and
+  * SparkContext, and passes them along with a Logger to the `application`
+  * method to be implemented by the extending object.
+  */
+trait SparkProgram {
+  def application(spark: SparkSession, sc: SparkContext, log: Logger): Unit
+
+  final def main(args: Array[String]): Unit = {
+    val name: String = this.getClass().getSimpleName().stripSuffix("$")
+
+    val spark = SparkSession
+      .builder()
+      .appName(name)
+      .master(s"spark://localhost:7077")
+      .config("spark.executor.memory", "4g")
+      .getOrCreate()
+    val sc = spark.sparkContext
+    sc.setLogLevel("WARN")
+    val log = Logger.getLogger(this.getClass())
+    application(spark, sc, log)
   }
 }

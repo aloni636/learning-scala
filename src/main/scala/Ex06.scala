@@ -1,15 +1,19 @@
 package learningscala
-import org.apache.spark.sql.{SparkSession, DataFrame}
-import org.apache.spark.sql.{functions => F, types => T}
-import org.apache.spark.storage.StorageLevel
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.conf.Configuration
-import org.apache.log4j.Logger
-import java.sql.Timestamp
-import java.time.Duration
-import java.time.Instant
 import com.github.tototoshi.csv._
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.log4j.Logger
+import org.apache.spark.SparkContext
+import org.apache.spark.sql.{
+  DataFrame,
+  SparkSession,
+  functions => F,
+  types => T
+}
+
 import java.io.{File, FileNotFoundException}
+import java.sql.Timestamp
+import java.time.{Duration, Instant}
 
 /*
   ### 6. RDD Aggregation Mechanics (Taxi Analytics)
@@ -92,8 +96,8 @@ object Ex06 extends SparkExercise {
   )
 }
 
-abstract class Ex6SparkProgram {
-  object SchemaEnforcer {
+abstract class Ex6SparkProgram extends SparkProgram {
+  private object SchemaEnforcer {
     // format: off
     val schema = T.StructType(
       Seq(
@@ -150,20 +154,10 @@ abstract class Ex6SparkProgram {
       spark: SparkSession
   ): Unit
 
-  def main(args: Array[String]): Unit = {
-    val name: String = this.getClass().getSimpleName().stripSuffix("$")
-
-    implicit val spark = SparkSession
-      .builder()
-      .appName(name)
-      .master(s"spark://localhost:7077")
-      .config("spark.executor.memory", "4g")
-      .getOrCreate()
-    val sc = spark.sparkContext
-    sc.setLogLevel("WARN")
-
+  override def application(spark: SparkSession, sc: SparkContext, log: Logger): Unit = {
     import spark.implicits._
-    implicit val log = Logger.getLogger(this.getClass())
+    implicit val log_ = log
+    implicit val spark_ = spark
 
     val conf = new Configuration()
     val fs = FileSystem.get(conf)
@@ -194,10 +188,9 @@ abstract class Ex6SparkProgram {
 }
 
 object Ex06DfProgram01 extends Ex6SparkProgram {
-  def task(
-      taxi: DataFrame,
-      zones: DataFrame
-  )(implicit spark: SparkSession): Unit = {
+  def task(taxi: DataFrame, zones: DataFrame)(implicit
+      spark: SparkSession
+  ): Unit = {
     import spark.implicits._
 
     val pickupsPerHour = taxi
