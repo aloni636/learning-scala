@@ -1,14 +1,14 @@
 // scala 2.13
 package learningscala
 import learningscala.Exercise
+
+import scala.collection.immutable.{ListMap, ListMapBuilder}
 import scala.io
-import scala.collection.immutable.ListMap
-import scala.collection.immutable.ListMapBuilder
 
 /*
   ---
 
-  ### 7. Project structure for your real pipeline
+  ### 8. Project structure for your real pipeline
 
   Once the above is comfortable, structure your repo so learning scales:
 

@@ -1,0 +1,1 @@
+./scripts/get-copernicus.sh 30 80 25 95 35 ./data/himalayas

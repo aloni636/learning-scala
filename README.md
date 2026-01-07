@@ -37,6 +37,13 @@ To stop Jupyter, run `./scripts/stop-jupyter.sh`.
 
 Note: VSCode notebooks do not communicate correctly with Almond kernel, leading to non existent autocomplete support, so I recommend using Jupyter Lab directly.
 
+# Debugging Dependencies Hell
+```
+sbt dependencyDot
+sbt:learning-scala> dependencyDot
+```
+Use **Graphviz Interactive Preview** extension to analyze & debug.
+
 # Credits
 - https://github.com/datablist/sample-csv-files for `./data/customers-100.csv`.
 - https://file-examples.com/index.php/sample-images-download/sample-tiff-download/ for `./data/0x00000001-0x00000002-0x00000001.tiff` (downsampled).

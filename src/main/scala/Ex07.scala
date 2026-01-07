@@ -1,63 +1,170 @@
+// NOTE: `import geotrellis.spark.store.hadoop._` is used to extend SparkContext with .hadoopGeoTiffRDD()
+
 package learningscala
+import geotrellis.raster.Tile
+import geotrellis.spark._
+import geotrellis.spark.store.hadoop._
+import geotrellis.vector.ProjectedExtent
+import org.apache.log4j.Logger
+import org.apache.spark.SparkContext
+import org.apache.spark.sql.SparkSession
 
 /*
-  ### 6. GeoTrellis + Spark
+  ### 7. Distributed, Spark based, raster exercises
 
-  Goal: understand the “tiled layer on Spark” model, because this is where your distributed GIS happens.
+  Goal: build intuition for raster-as-distributed-data, not just API usage.
+  Focus on tiled computation, global aggregation, and layout-aware algorithms.
 
-  Key abstractions:
-
- * `RDD[(K, V)]` layers where `K` is `SpatialKey` or `SpaceTimeKey`.
- * `TileLayerMetadata[K]` and `ContextRDD[K, V, TileLayerMetadata[K]]`.
- * `LayoutDefinition`, `ZoomedLayoutScheme`.
- * Tiling and retiling, pyramids, reading/writing from a catalog (e.g. S3 / HDFS).
-
-  Suggested flow:
-
-  1. Add spark + GeoTrellis spark modules to your sbt project (Spark 3.3 + 2.13).
-
-  2. In `Main`:
-
- * Create a `SparkSession`.
- * Use `GeoTiffRDD` or similar helpers to read many GeoTIFF tiles into an RDD.
- * Tile them to a `TileLayerRDD[SpatialKey]`.
- * Run a simple local op across the whole layer (e.g. multiply all cells by 2).
- * Write out to a catalog or back to GeoTIFFs.
-
-  3. Then, start mapping this to your future cost-distance / road-age / DEM work:
-
- * Think “DEM as `TileLayerRDD[SpatialKey]`”.
- * Think “OSM roads as vector layer, rasterized onto same layout”.
+  All exercises assume:
+  - DEM loaded as `TileLayerRDD[SpatialKey]`
+  - Fixed `LayoutDefinition`
+  - Explicit awareness of tile boundaries and shuffles
  */
 
 /*
-B. Regions (tile-friendly, Spark-justifying)
+  A. Terrain-derived layers (local neighborhood ops)
 
-These were chosen to (a) have strong terrain signal and (b) justify tiling + distributed processing without cloud-scale storage.
+  Purpose:
+  - Understand cell neighborhoods
+  - See how local ops scale cleanly across tiles
 
-1. Himalayas (excellent default)
+  Steps:
+  1. Load DEM → `TileLayerRDD[SpatialKey]`
+  2. Compute derived rasters:
+     - slope
+     - aspect
+  3. Reclassify slope into bins (e.g. 0–5, 5–15, 15–30, 30+ degrees)
+  4. Aggregate:
+     - per-tile histograms
+     - global histogram across all tiles
 
-   - Lon: `80 .. 95`
-   - Lat: `25 .. 35`
-   - ~150 tiles
-   - Extreme relief → slopes, viewshed, cost-distance all become meaningful.
-
-2. Andes (clean alternative, southern hemisphere)
-
-   - Lon: `-80 .. -70`
-   - Lat: `-20 .. 0`
-   - Similar tile count
-   - Long continuous mountain chains, fewer data quirks.
-
-3. Alps (smaller but dense)
-
-   - Lon: `5 .. 15`
-   - Lat: `44 .. 48`
-   - Fewer tiles, but very high signal density.
-   - Good if you want faster iteration with real terrain complexity.
+  Notes:
+  - Neighborhood ops stay local to tiles
+  - Global aggregation forces shuffle
+  - Compare per-partition vs global results
  */
 
-object Ex07 extends Exercise {
-  override def run(): Unit = {}
+/*
+  B. Zonal statistics (raster × vector)
+
+  Purpose:
+  - Exercise raster/vector alignment
+  - Understand rasterization cost and layout constraints
+
+  Data:
+  - DEM raster
+  - Polygon zones (admin areas, watersheds, etc.)
+
+  Steps:
+  1. Reproject vectors to DEM CRS
+  2. Rasterize polygons to DEM layout
+  3. For each zone compute:
+     - mean elevation
+     - elevation variance
+     - max slope
+  4. Rank zones by terrain roughness
+
+  Notes:
+  - CRS mismatch is the main failure mode
+  - Rasterization must match layout exactly
+  - Naïve approaches explode memory
+ */
+
+/*
+  C. Cost surface + cost-distance
+
+  Purpose:
+  - Implement a global raster algorithm
+  - Justify Spark beyond embarrassingly-parallel ops
+
+  Concept:
+  - Treat raster as weighted graph
+  - Cell values represent traversal cost
+
+  Steps:
+  1. Build cost raster from slope
+     - flat = low cost
+     - steep = high cost
+  2. Add constraints:
+     - forbidden cells
+     - altitude thresholds
+  3. Select:
+     - single source
+     - many destinations
+  4. Compute:
+     - cost-distance surface
+     - least-cost paths
+
+  Notes:
+  - Requires iterative expansion (Dijkstra / wavefront)
+  - Driver coordination vs executor work becomes visible
+  - Clear limits of Spark for graph-like raster algorithms
+ */
+
+/*
+  D. Sampling strategy
+
+  Purpose:
+  - Separate algorithm validation from scale effects
+
+  Approach:
+  - Sample small spatial windows to:
+    - debug CRS and layout
+    - validate logic
+  - Run full extent to:
+    - observe shuffle cost
+    - test executor memory limits
+    - justify distributed execution
+
+  Rule:
+  - Sampling is for correctness
+  - Full run is for system behavior
+ */
+
+object Ex07 extends SparkExercise {
+  val programs = Seq(
+    "Ex07RddProgram"
+  )
+}
+
+object Ex07RddProgram extends SparkProgram {
+  override def application(
+      spark: SparkSession,
+      sc: SparkContext,
+      log: Logger
+  ): Unit = {
+    def where(c: Class[?]): String =
+      Option(c.getProtectionDomain)
+        .flatMap(pd => Option(pd.getCodeSource))
+        .map(_.getLocation.toString)
+        .getOrElse("<no code source>")
+
+    println(
+      "[Ex07RddProgram Probe] Driver spire.Integral from: " + where(
+        classOf[spire.math.Integral[?]]
+      )
+    )
+
+    sc.parallelize(Seq(1), 1).foreach { _ =>
+      println(
+        "[Ex07RddProgram Probe] Executor spire.Integral from: " + where(
+          classOf[spire.math.Integral[?]]
+        )
+      )
+    }
+
+    val geoTiffPath =
+      "/workspaces/learning-scala/data/himalayas/Copernicus_DSM_COG_10_N25_00_E081_00_DEM.tif"
+
+    val rdd = sc.hadoopGeoTiffRDD(geoTiffPath)
+
+    val count = rdd.count()
+    val (pe, tile) = rdd.first()
+
+    println(s"count=$count")
+    println(s"crs=${pe.crs}")
+    println(s"extent=${pe.extent}")
+    println(s"cols=${tile.cols} rows=${tile.rows} cellType=${tile.cellType}")
+  }
 
 }

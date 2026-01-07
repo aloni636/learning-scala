@@ -39,7 +39,7 @@ trait SparkExercise extends Exercise {
     this.assemble()
 
     this.programs.foreach { program =>
-      println(s"[SparkExercise] Submitting program '${program}' to Spark...")
+      println(s"[Spark Exercise] Submitting program '${program}' to Spark...")
       val driver = os
         .proc(
           "spark-submit",
@@ -53,7 +53,7 @@ trait SparkExercise extends Exercise {
         )
         .spawn(cwd = os.pwd, stdout = os.Inherit, stderr = os.Inherit)
       driver.waitFor(-1)
-      println(s"[SparkExercise] Finished program '${program}'")
+      println(s"[Spark Exercise] Finished program '${program}'")
     }
   }
 }

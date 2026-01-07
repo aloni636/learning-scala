@@ -4,10 +4,10 @@ set -euo pipefail
 # Stage Copernicus DEM COG tiles (1x1 degree) by tile indices, using curl native parallelism.
 #
 # Usage:
-#   ./download_copernicus.sh <30|90> <lon_min_deg> <lat_min_deg> <lon_max_deg> <lat_max_deg> <out_dir>
+#   ./get-copernicus.sh <30|90> <lon_min_deg> <lat_min_deg> <lon_max_deg> <lat_max_deg> <out_dir>
 #
 # Example:
-#   ./scripts/download_copernicus.sh 30 80 25 95 35 ./data/download
+#   ./scripts/get-copernicus.sh 90 80 25 95 35 ./data/download
 
 res_choice="${1:?resolution (30 or 90)}"
 lon_min="${2:?lon_min_deg (int)}"

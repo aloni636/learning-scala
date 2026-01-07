@@ -1,16 +1,24 @@
 # GeoTrellis / Scala devcontainer
-# - Spark 3.3.x + Scala 2.13 (via manual install)
-# - Java 17 (latest supported for Spark 3.3.x)
+# - Spark 3.5.5 + Scala 2.13 (via manual install)
+# - Java 17 (latest supported for Spark 3.5.5)
 # NOTE: eclipse-temurin is how you get openjdk now
 FROM eclipse-temurin:17
 
 # Make all RUN commands use 'set -eux' by default with pipefail for better command pipelines
+# NOTE: set -eux
+#       -e: exit on error
+#       -u: fail on undefined vars
+#       -x: print executed commands	
 SHELL ["/bin/bash", "-eux", "-o", "pipefail", "-c"]
 
 # Spark binary version
-# NOTE: We use Spark 3.3.X as this is the latest version compatible with GeoTrellis
-# NOTE: Scala version is 2.13.8
-ARG SPARK_VERSION=3.3.4
+# NOTE: We use Spark 3.5.5 as this is the latest version compatible with GeoTrellis
+#       Technically latest supported Spark is 3.5.7:
+#       https://github.com/locationtech/geotrellis/blob/7ec19811fa6230faeb531c185d627195ad7b1ec0/project/Dependencies.scala#L65-L67
+#       But in Maven it is declared to be dependent on 3.5.5:
+#       https://mvnrepository.com/artifact/org.locationtech.geotrellis/geotrellis-spark_2.13/3.8.0
+# NOTE: Scala version for Spark 3.5.5 is 2.13.8
+ARG SPARK_VERSION=3.5.5
 ARG HADOOP_VERSION=3
 ARG SCALA_BINARY_VERSION=2.13
 
@@ -44,10 +52,15 @@ ARG USER_GID=$USER_UID
 ENV SPARK_HOME=/opt/spark
 ENV PATH="/home/${USERNAME}/.local/share/coursier/bin:${PATH}"
 
-# NOTE: set -eux
-#       -e: exit on error
-#       -u: fail on undefined vars
-#       -x: print executed commands	
+# spark user & devcontainer workspace dir
+# See: https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user#_creating-a-nonroot-user
+# NOTE: ignores if group id already exists; attempts to create a new user if ${USERNAME} with ${USER_UID} does not exist - fail if unsuccessful
+# NOTE: we do this first to have ${USER_UID}:${USER_GID} ready for later chown commands
+RUN getent group "${USER_GID}" || groupadd --gid "${USER_GID}" "${USERNAME}" \
+    && ( id "${USERNAME}" && [ "$(id -u "${USERNAME}")" = "${USER_UID}" ] \
+    || useradd --uid "${USER_UID}" --gid "${USER_GID}" -m -s /bin/bash "${USERNAME}" ) \
+    && mkdir -p /workspaces \
+    && ( chown -R "${USER_UID}:${USER_GID}" "/home/${USERNAME}" /workspaces || true )
 
 # Base tools
 USER root
@@ -60,13 +73,15 @@ RUN apt-get update \
     gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Spark 3.3.x (Scala 2.13)
+# Install Spark
+# NOTE: We chown at the end to avoid weird 1001:1001 ownership popping up
 RUN curl -fsSL "https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}-scala${SCALA_BINARY_VERSION}.tgz" \
     -o /tmp/spark.tgz \
     && mkdir -p /opt \
     && tar -xzf /tmp/spark.tgz -C /opt \
     && mv "/opt/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}-scala${SCALA_BINARY_VERSION}" "${SPARK_HOME}" \
-    && rm /tmp/spark.tgz
+    && rm /tmp/spark.tgz \
+    && chown -R ${USER_UID}:${USER_GID} ${SPARK_HOME}
 
 # coursier (Scala artifact fetcher)
 RUN curl -fsSL "https://github.com/coursier/coursier/releases/download/v${CS_VERSION}/cs-x86_64-pc-linux.gz" \
@@ -74,15 +89,6 @@ RUN curl -fsSL "https://github.com/coursier/coursier/releases/download/v${CS_VER
     gunzip /tmp/cs.gz; \
     install -m 0755 /tmp/cs /usr/local/bin/cs; \
     rm -f /tmp/cs
-
-# spark user & devcontainer workspace dir
-# See: https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user#_creating-a-nonroot-user
-# NOTE: ignores if group id already exists; attempts to create a new user if ${USERNAME} with ${USER_UID} does not exist - fail if unsuccessful
-RUN getent group "${USER_GID}" || groupadd --gid "${USER_GID}" "${USERNAME}" \
-    && ( id "${USERNAME}" && [ "$(id -u "${USERNAME}")" = "${USER_UID}" ] \
-    || useradd --uid "${USER_UID}" --gid "${USER_GID}" -m -s /bin/bash "${USERNAME}" ) \
-    && mkdir -p /workspaces \
-    && ( chown -R "${USER_UID}:${USER_GID}" "/home/${USERNAME}" /workspaces || true )
 
 # Derive Scala patch version from Spark distribution
 # (AND AVOID MISMATCH BETWEEN INSTALLED SCALA AND SPARK SCALA VERSIONS!)

@@ -76,7 +76,8 @@
                 "scala-lang.scala",
                 "scalameta.metals",
                 "ms-toolsai.jupyter",
-                "christian-kohler.path-intellisense"
+                "christian-kohler.path-intellisense",
+                "tintinweb.graphviz-interactive-preview"
             ]
         }
     }
