@@ -5,7 +5,6 @@ import sbtassembly.AssemblyPlugin.autoImport._
 ThisBuild / scalaVersion := "2.13.16"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
-lazy val shadePrefix = "gtshade"
 // NOTE: Why we shade Spire (and algebra)
 //       I got hit with `java.lang.NoSuchMethodError: 'spire.math.IntIsIntegral spire.math.Integral$.IntIsIntegral()'`
 //       when submitting a geotrellis-spark dependent program to my standalone Spark cluster (Ex07RddProgram)
@@ -21,8 +20,9 @@ lazy val shadePrefix = "gtshade"
 //       ls -1 $SPARK_HOME/jars | grep -i spire || true
 //       sbt evicted | grep -i spire -n
 //       ```
-//       To get better context into this hellish bug, view the dependency graph dot file interactively 
+//       To get better context into this hellish bug, view the dependency graph dot file interactively
 //       using `sbt dependencyDot` and the installed `Graphviz Interactive Preview` VSCode extension
+lazy val shadePrefix = "gtshade" // geotrellis shaded package
 ThisBuild / assemblyShadeRules := Seq(
   // relocate Spire
   ShadeRule.rename("spire.**" -> s"$shadePrefix.spire.@1").inAll,
@@ -36,8 +36,7 @@ ThisBuild / assemblyShadeRules := Seq(
 // WARNING: Uncomment if you see any sign of trouble!
 // dependencyOverrides += "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0"
 
-
-lazy val hello = (project in file("."))
+lazy val learningScala = (project in file("."))
   .settings(
     name := "learning-scala",
     // NOTE: Using 2.13.8, we hit eviction issues with GeoTrellis requiring 2.13.16,

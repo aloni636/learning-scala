@@ -1,10 +1,8 @@
 # Workflow
-`sbt` is your friend - that's how you execute scala.
-Make sure your'e in project **hello**:
-```
+`sbt` is your friend - that's how you execute scala:
+```sh
 sbt
-sbt:learning-scala> project hello
-sbt:hello> run
+sbt:learning-scala> run
 ```
 
 # Running Exercises
@@ -38,9 +36,10 @@ To stop Jupyter, run `./scripts/stop-jupyter.sh`.
 Note: VSCode notebooks do not communicate correctly with Almond kernel, leading to non existent autocomplete support, so I recommend using Jupyter Lab directly.
 
 # Debugging Dependencies Hell
-```
+```sh
 sbt dependencyDot
-sbt:learning-scala> dependencyDot
+# ...
+# [info] Wrote dependency graph to '/workspaces/learning-scala/target/dependencies-compile.dot'
 ```
 Use **Graphviz Interactive Preview** extension to analyze & debug.
 

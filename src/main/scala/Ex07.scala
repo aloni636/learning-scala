@@ -128,11 +128,13 @@ object Ex07 extends SparkExercise {
 }
 
 object Ex07RddProgram extends SparkProgram {
-  override def application(
-      spark: SparkSession,
-      sc: SparkContext,
-      log: Logger
-  ): Unit = {
+  // I used this expression-block / function to diagnose
+  // `java.lang.NoSuchMethodError: 'spire.math.IntIsIntegral spire.math.Integral$.IntIsIntegral()'`
+  // error to figure out if there's a race between sbt-assembly provided Spire library
+  // and Spark's MLib provided Spire.
+  // See build.sbt's ShadeRules
+  def diagnoseSparkRuntimeClasspathRace(sc: SparkContext): Unit = {
+    // `?` is an "existential type", a wildcard type capturing all types
     def where(c: Class[?]): String =
       Option(c.getProtectionDomain)
         .flatMap(pd => Option(pd.getCodeSource))
@@ -152,7 +154,13 @@ object Ex07RddProgram extends SparkProgram {
         )
       )
     }
-
+  }
+  override def application(
+      spark: SparkSession,
+      sc: SparkContext,
+      log: Logger
+  ): Unit = {
+    // diagnoseSparkRuntimeClasspathRace(sc)
     val geoTiffPath =
       "/workspaces/learning-scala/data/himalayas/Copernicus_DSM_COG_10_N25_00_E081_00_DEM.tif"
 
