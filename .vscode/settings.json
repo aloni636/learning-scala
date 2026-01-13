@@ -16,6 +16,7 @@
         "Chrono",
         "coursier",
         "dropoff",
+        "EPSG",
         "gdal",
         "geotrellis",
         "insitaintaing",
