@@ -3,17 +3,18 @@
 package learningscala
 import geotrellis.layer._
 import geotrellis.proj4.CRS
-import geotrellis.raster.Tile
+import geotrellis.proj4.util.UTM
+import geotrellis.raster.{Tile, _}
+import geotrellis.raster.{mapalgebra => M}
 import geotrellis.spark._
 import geotrellis.spark.store.hadoop._
 import geotrellis.vector.ProjectedExtent
+import org.apache.hadoop.fs.Path
 import org.apache.log4j.Logger
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import pprint.pprintln
-import org.apache.hadoop.fs.Path
-
 /*
   ### 7. Distributed, Spark based, raster exercises
 
@@ -110,6 +111,7 @@ object Ex07RddProgram extends SparkProgram {
     pprintln(layer.metadata.extent)
     pprintln(layer.metadata.bounds)
     pprintln(layer.metadata.layout)
+
     /*
       A. Terrain-derived layers (local neighborhood ops)
 
@@ -132,6 +134,62 @@ object Ex07RddProgram extends SparkProgram {
       - Global aggregation forces shuffle
       - Compare per-partition vs global results
      */
+
+    val projectedRdd = rdd.map { case (pe, raster) =>
+      (
+        pe,
+        raster.reproject(
+          pe.extent,
+          pe.crs,
+          // NOTE: I assume `pe` is of EPSG:4326, which it is (as of all Copernicus COGs)
+          UTM.getZoneCrs(
+            lon = pe.extent.center.getX(),
+            lat = pe.extent.center.getY()
+          )
+        )
+      )
+    }
+    val aspectRdd = projectedRdd.mapValues { raster =>
+      raster.mapTile(tile => tile.aspect(raster.cellSize))
+    }
+    val slopeRdd = projectedRdd.mapValues { raster =>
+      raster.mapTile(tile => tile.slope(raster.cellSize))
+    }
+
+    val SLOPE_CLASSES = Array(5, 15, 30)
+    val slopeClassRdd = slopeRdd.mapValues { raster =>
+      raster.mapTile(tile =>
+        tile.mapDouble(c => {
+          // `java.util.Arrays.binarySearch` returns:
+          // [+] positive array index for exact matches, and
+          // [-] negative range index for inexact matches
+          val i = java.util.Arrays.binarySearch(SLOPE_CLASSES, c.toInt)
+          if (i >= 0) i else -i - 1
+        })
+      )
+    }
+    val histogram = slopeClassRdd
+      .map { case (_, raster) =>
+        raster.tile.histogram
+      }
+      .reduce { case (a, b) => a.merge(b) }
+
+    println("### Slope RDD Statistics ###")
+    val slopeClassStrings = {
+      val strings = SLOPE_CLASSES.map(_.toString())
+      strings.prepended("0").zip(strings.appended("Inf")).map { case (a, b) =>
+        s"${a}-${b}"
+      }
+    }
+    println(
+      histogram
+        .binCounts()
+        .sortBy { case (bin, count) => bin }
+        .map { case (bin, count) =>
+          s"${slopeClassStrings(bin)}: ${count}"
+        }
+        .mkString("\n")
+    )
 
     /*
       B. Zonal statistics (raster × vector)
