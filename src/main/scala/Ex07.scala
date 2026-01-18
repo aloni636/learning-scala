@@ -68,7 +68,7 @@ object Ex07RddProgram extends SparkProgram {
   ): Unit = {
     // diagnoseSparkRuntimeClasspathRace(sc)
     val TIFF_PATH =
-      "file:///workspaces/learning-scala/data/himalayas/Copernicus_DSM_COG_10_N25_00_E081_00_DEM.tif"
+      "file:///workspaces/learning-scala/data/himalayas/Copernicus_DSM_COG_10_N26_00_E087_00_DEM.tif"
 
     // NOTE: sc.hadoopGeoTiffRDD reads TIFF in 256x256 tiles, regardless of the TIFF internal tiling
     //       As for Copernicus, it's TIFF tiling is 1024 for GLO-30,

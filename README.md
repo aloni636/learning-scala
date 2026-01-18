@@ -5,13 +5,13 @@ sbt
 sbt:learning-scala> run
 ```
 
-# Running Exercises
+## Running Exercises
 I use a **cli argument dispatcher**, so you select an exercise by it's object name and run it: `sbt "run Ex01"`. View all available exercises by running `sbt run`.
 
-# Creating Exercises
+## Creating Exercises
 Create a new `Ex<>` file in `hello/src/main/scala`, and add an `Exercise` object with a `run` method. After that you should add it to the exercise list in `hello/src/main/scala/hello` and run it with `sbt "run Ex<>"`.
 
-# Running Spark Exercises
+## Running Spark Exercises
 A spark standalone cluster is automatically started when the devcontainer is created, available at `spark://localhost:7077`. 
 
 You can monitor the Spark cluster at `http://localhost:8080`, the history server at `http://localhost:18080`, and more granularly at `$SPARK_HOME/logs/`.
@@ -35,13 +35,15 @@ To stop Jupyter, run `./scripts/stop-jupyter.sh`.
 
 Note: VSCode notebooks do not communicate correctly with Almond kernel, leading to non existent autocomplete support, so I recommend using Jupyter Lab directly.
 
-# Debugging Dependencies Hell
+# Debugging
+
+## Dependencies Hell
+Use **Graphviz Interactive Preview** extension to analyze & debug sbt's dependency graph:
 ```sh
 sbt dependencyDot
 # ...
 # [info] Wrote dependency graph to '/workspaces/learning-scala/target/dependencies-compile.dot'
 ```
-Use **Graphviz Interactive Preview** extension to analyze & debug.
 
 # Credits
 - https://github.com/datablist/sample-csv-files for `./data/customers-100.csv`.
@@ -55,3 +57,4 @@ Use **Graphviz Interactive Preview** extension to analyze & debug.
     BL: [86.899444, 27.957778]
     ```
 - https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf for NYC-TLC data dictionary PDF.
+- https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/physical/ne_10m_geography_regions_polys.zip for `./data/himalayas.geojson` (extracted with `ogr2ogr himalayas.geojson ne_10m_geography_regions_polys.shp -where "name = 'Himalayas'"`)

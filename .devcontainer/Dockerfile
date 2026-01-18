@@ -64,14 +64,14 @@ RUN getent group "${USER_GID}" || groupadd --gid "${USER_GID}" "${USERNAME}" \
 
 # Base tools
 USER root
+# Fetching index, removing it after last apt-get install call
+RUN apt-get update
 # Install curl for downloads, unzip for awscli, ca-certificates for https, gnupg for apt over https
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+RUN apt-get install -y \
     curl \
     unzip \
     ca-certificates \
-    gnupg \
-    && rm -rf /var/lib/apt/lists/*
+    gnupg
 
 # Install Spark
 # NOTE: We chown at the end to avoid weird 1001:1001 ownership popping up
@@ -114,10 +114,7 @@ RUN . /etc/spark-scala.env; \
 
 # Install GDAL to verify Geotrellis results
 USER root
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    gdal-bin \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get install -y gdal-bin
 
 # Install AWS CLI v2
 USER root
@@ -128,16 +125,13 @@ RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tm
 
 # Install Python3.12
 USER root
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    python3.12 \
-    && rm -rf /var/lib/apt/lists/*
-# NOTE: eclipse-temurin:17 doesn't come with available apt installable python3-pip
-RUN curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py \
-    && python3.12 /tmp/get-pip.py --break-system-packages --root-user-action=ignore \
-    && rm /tmp/get-pip.py
+RUN apt-get install -y ${PYTHON_VERSION} ${PYTHON_VERSION}-venv python3-pip pipx
+
 # Install jupyterlab
-RUN pip3 install --no-cache-dir --break-system-packages --root-user-action=ignore 'jupyterlab>=4.1.0,<5.0.0a0' jupyterlab-lsp
+USER ${USERNAME}
+RUN pipx install "jupyterlab>=4.1.0,<5.0.0a0" --include-deps \
+    && pipx inject jupyterlab jupyterlab-lsp \
+    && pipx ensurepath
 
 # Install metals for jupyterlab-lsp scala support
 USER ${USERNAME}
@@ -145,14 +139,12 @@ RUN cs install metals --install-dir ~/.local/share/coursier/bin
 
 # Additional Utilities
 USER root
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+RUN apt-get install -y \
     git \
     bash \
     less \
     vim \
-    tree \
-    && rm -rf /var/lib/apt/lists/*
+    tree
 
 # NOTE: creating /var/spark-events before mounting (in devcontainer.json) ensures proper permissions
 USER root

@@ -28,21 +28,23 @@
     // Use root to run postCreateCommand chown, then switch to 'ubuntu' user
     "containerUser": "root",
     "remoteUser": "ubuntu",
+    // NOTE: running as root user (see containerUser), so no sudo needed
     "postCreateCommand": {
         // Link the custom spark-defaults.conf into SPARK_HOME/conf
-        "linkSparkConfig": "ln -s /workspaces/${localWorkspaceFolderBasename}/spark-defaults.conf ${containerEnv:SPARK_HOME}/conf/spark-defaults.conf",
-        "linkSparkEnv": "ln -s /workspaces/${localWorkspaceFolderBasename}/spark-env.sh ${containerEnv:SPARK_HOME}/conf/spark-env.sh",
+        "linkSparkConfig": "ln -s ${containerWorkspaceFolder}/spark-defaults.conf ${containerEnv:SPARK_HOME}/conf/spark-defaults.conf",
+        "linkSparkEnv": "ln -s ${containerWorkspaceFolder}/spark-env.sh ${containerEnv:SPARK_HOME}/conf/spark-env.sh",
+        // NOTE: this command was supposed to be executed by ubuntu user, but we only have root to run commands at container creation, so we run it as root and chown it
+        "linkJupyterConfig": "mkdir -p /home/ubuntu/.jupyter && ln -s ${containerWorkspaceFolder}/jupyter_server_config.json /home/ubuntu/.jupyter/jupyter_server_config.json && chown -R ubuntu:ubuntu /home/ubuntu/.jupyter",
         // Mounting a volume sets root as owner, so we need to chown it to ubuntu
         // NOTE: running as root user (see containerUser), so no sudo needed
-        "chownSparkEvents": "chown -R ubuntu:ubuntu /var/spark-events",
-        // NOTE: this command was supposed to be executed by ubuntu user, but we only have root to run commands at container creation, so we run it as root and chown it
-        "linkJupyterConfig": "mkdir -p ~/.jupyter && ln -s /workspaces/${localWorkspaceFolderBasename}/jupyter_server_config.json /home/ubuntu/.jupyter/jupyter_server_config.json && chown -R ubuntu:ubuntu /home/ubuntu/.jupyter"
+        "chownSparkEvents": "chown -R ubuntu:ubuntu /var/spark-events"
     },
     // runs as remoteUser 'ubuntu'
     "postStartCommand": {
         "startSpark": "${containerWorkspaceFolder}/scripts/start-spark.sh",
         // NOTE: we redirect to /dev/null to prevent nohup from streaming the output to ./nohup.out
-        "startJupyter": "nohup bash -c 'jupyter lab --no-browser --ip=127.0.0.1 --port=8888 > .jupyter.log 2>&1 &' > /dev/null"
+        // NOTE: -l is used to load pipx packages paths from .bashrc, added when ran `pipx ensurepath`
+        "startJupyter": "nohup bash -lc 'jupyter lab --no-browser --ip=127.0.0.1 --port=8888 > .jupyter.log 2>&1 &' > /dev/null"
     },
     // NOTE: More ports will be forwarded by VSCode automatically, but those are the main ones used by scripts in ./scripts/
     "forwardPorts": [
@@ -77,7 +79,8 @@
                 "scalameta.metals",
                 "ms-toolsai.jupyter",
                 "christian-kohler.path-intellisense",
-                "tintinweb.graphviz-interactive-preview"
+                "tintinweb.graphviz-interactive-preview",
+                "ms-python.python"
             ]
         }
     }

@@ -79,6 +79,13 @@ data/himalayas
 data/taxi
 output/
 
+# python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv
+
 # jupyterlab
 .virtual_documents
 .ipynb_checkpoints
