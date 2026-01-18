@@ -35,6 +35,19 @@ To stop Jupyter, run `./scripts/stop-jupyter.sh`.
 
 Note: VSCode notebooks do not communicate correctly with Almond kernel, leading to non existent autocomplete support, so I recommend using Jupyter Lab directly.
 
+# Downloading Data
+*TLDR:*
+
+```sh
+source ./.venv/bin/activate
+./scripts/download-taxi.sh
+./scripts/download-himalayas.sh
+```
+
+Exercise 6 (`./src/main/scala/Ex06.scala`) requires part of the **NYC TLC dataset**. Fetch it using `./scripts/download-taxi.sh`.
+
+Exercise 7 (`./src/main/scala/Ex07.scala`) requires the **Copernicus dataset**. Fetching it is complex enough to require Python scripting. The Python environment is automatically configured, but **the `.venv` must be activated!** If VSCode doesn't activate it when you open the integrated terminal, run `source ./.venv/bin/activate` before running `./scripts/download-himalayas.sh`
+
 # Debugging
 
 ## Dependencies Hell
