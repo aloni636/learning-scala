@@ -37,7 +37,8 @@
         "linkJupyterConfig": "mkdir -p /home/ubuntu/.jupyter && ln -s ${containerWorkspaceFolder}/jupyter_server_config.json /home/ubuntu/.jupyter/jupyter_server_config.json && chown -R ubuntu:ubuntu /home/ubuntu/.jupyter",
         // Mounting a volume sets root as owner, so we need to chown it to ubuntu
         // NOTE: running as root user (see containerUser), so no sudo needed
-        "chownSparkEvents": "chown -R ubuntu:ubuntu /var/spark-events"
+        "chownSparkEvents": "chown -R ubuntu:ubuntu /var/spark-events",
+        "createPythonEnv": "bash -lc 'python3 -m venv ${containerWorkspaceFolder}/.venv && source ${containerWorkspaceFolder}/.venv/bin/activate && pip install --upgrade pip && pip install -r ${containerWorkspaceFolder}/requirements.txt'"
     },
     // runs as remoteUser 'ubuntu'
     "postStartCommand": {
