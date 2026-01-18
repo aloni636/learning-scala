@@ -1,1 +1,1 @@
-./scripts/get-copernicus.sh --resolution 30 --region ./data/himalayas.geojson --output ./data/himalayas
+./scripts/get-copernicus.py --resolution 30 --region ./data/himalayas.geojson --output ./data/himalayas
