@@ -153,6 +153,11 @@ def main() -> None:
 
     grid["out"] = grid["filename"].map(lambda f: outdir / f)
 
+    # Persist grid for inspection / QGIS
+    grid_path = outdir / "copernicus_tile_grid.geojson"
+    grid.to_file(grid_path, driver="GeoJSON")
+    print(f"Tile grid written to: {grid_path}")
+
     # Skip already-downloaded files
     missing = grid[~grid["out"].map(Path.exists)]
 
