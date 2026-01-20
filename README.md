@@ -48,6 +48,9 @@ Exercise 6 (`./src/main/scala/Ex06.scala`) requires part of the **NYC TLC datase
 
 Exercise 7 (`./src/main/scala/Ex07.scala`) requires the **Copernicus dataset**. Fetching it is complex enough to require Python scripting. The Python environment is automatically configured, but **the `.venv` must be activated!** If VSCode doesn't activate it when you open the integrated terminal, run `source ./.venv/bin/activate` before running `./scripts/download-himalayas.sh`
 
+# Projections
+In **exercise 7** (`Ex07`) I used a custom projection to perform projected analysis of the Himalayas without UTM stitching. To evaluate it (and other projections) I performed CRS distortion analysis which you can read about here: [**Projection Considerations**](PROJECTIONS.md).
+
 # Debugging
 
 ## Dependencies Hell

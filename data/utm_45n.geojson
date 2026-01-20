@@ -1,0 +1,22 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "UTM Zone 45N",
+        "epsg": 32645
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [84.0, 0.0],
+          [90.0, 0.0],
+          [90.0, 84.0],
+          [84.0, 84.0],
+          [84.0, 0.0]
+        ]]
+      }
+    }
+  ]
+}

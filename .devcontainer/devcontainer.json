@@ -81,7 +81,8 @@
                 "ms-toolsai.jupyter",
                 "christian-kohler.path-intellisense",
                 "tintinweb.graphviz-interactive-preview",
-                "ms-python.python"
+                "ms-python.python",
+                "ms-python.black-formatter"
             ]
         }
     }
