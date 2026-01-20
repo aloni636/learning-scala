@@ -10,6 +10,8 @@ To evaluate the different projections (CRSs), I created and used the script `./s
 
 It is important to consider the **p99 distortion** as much as we consider the max distortion, as max operation highlight outliers while p99 doesn't.
 
+The comparison is between distortions in UTM Zone 45N WGS84 within its intended extents and distortions in each custom CRS within the Himalayas strip. It may sound unfair for UTM, but my goal is to get as close as possible to acceptable distortion rates within Himalayas, **where acceptable is defined by how UTM defines acceptable within some UTM zone** - in this case UTM Zone 45N WGS84 and its long extent.
+
 The preview images of the projections include 2 red lines across the Himalayas - those are the 1/4 and 3/4 latitude parallels used in LCC and OMERC.
 
 ## LCC (Lambert Conformal Conic)
