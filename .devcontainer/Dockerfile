@@ -131,6 +131,8 @@ RUN apt-get install -y ${PYTHON_VERSION} ${PYTHON_VERSION}-venv python3-pip pipx
 USER ${USERNAME}
 RUN pipx install "jupyterlab>=4.1.0,<5.0.0a0" --include-deps \
     && pipx inject jupyterlab jupyterlab-lsp \
+    && pipx inject jupyterlab jupytext \
+    && pipx install jupytext \
     && pipx ensurepath
 
 # Install metals for jupyterlab-lsp scala support

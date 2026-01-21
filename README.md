@@ -21,7 +21,7 @@ Experiment interactively with:
 spark-shell --master spark://localhost:7077
 ```
 
-A Jupyter-lab server is also automatically started (with Almond Scala kernel & .scala files LSP).
+A Jupyter-lab server is also automatically started (with Almond Scala kernel, Metals LSP support and jupytext).
 
 Open it by looking for the Jupyter URL in `.jupyter.log` file, or run:
 
@@ -30,6 +30,8 @@ jupyter server list
 # Currently running servers:
 # http://127.0.0.1:8888/?token=<TOKEN> :: /workspaces/learning-scala
 ```
+
+All notebooks are stored in `./notebooks` as jupytext files (those are easier to manage with git).
 
 To stop Jupyter, run `./scripts/stop-jupyter.sh`.
 
